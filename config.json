@@ -1,0 +1,15 @@
+{
+  "map": {
+    "initialView": {
+      "center": {
+        "lat": 34.853667,
+        "lng": 135.472041
+      },
+      "zoom": 15
+    }
+  },
+  "imageOverlay": {
+    "defaultScale": 0.8,
+    "defaultOpacity": 50
+  }
+}
