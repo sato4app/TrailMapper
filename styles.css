@@ -370,6 +370,6 @@
 
 #saveGeoJsonRouteBtn {
     flex: 1;
-    min-width: 60px;
+    width: 100px;
 }
 
