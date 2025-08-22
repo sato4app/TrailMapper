@@ -288,9 +288,9 @@
 /* ルート操作ボタンのスタイル */
 .route-action-buttons {
     display: flex;
-    gap: 15px;
+    flex-direction: column;
+    gap: 8px;
     margin-top: 20px;
-    justify-content: space-between;
 }
 
 .route-action-group {
@@ -303,11 +303,11 @@
 }
 
 .route-action-left {
-    border-left: 4px solid #007bff;
+    border-top: 4px solid #007bff;
 }
 
 .route-action-right {
-    border-left: 4px solid #28a745;
+    border-top: 4px solid #28a745;
 }
 
 .route-action-btn {
