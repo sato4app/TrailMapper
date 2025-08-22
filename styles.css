@@ -322,7 +322,10 @@
     cursor: pointer;
     text-align: center;
     transition: all 0.2s ease;
-    min-width: 0;
+    min-width: 60px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .route-action-right .route-action-btn {
