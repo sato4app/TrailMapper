@@ -142,30 +142,20 @@ export class RouteEditor {
 
     // 地図クリック時の処理
     onMapClick(e) {
-        console.log('=== onMapClick開始 ===');
-        console.log('selectedActionButton:', this.selectedActionButton);
-        
         if (!this.selectedActionButton) {
-            console.log('selectedActionButtonが設定されていない');
             return;
         }
 
         const routeSelect = document.getElementById('routeSelect');
         if (!routeSelect || !routeSelect.value) {
-            console.log('ルートが選択されていない');
             this.showErrorMessage('エラー', 'ルートを選択してください。');
             return;
         }
-
-        console.log('ルートセレクト値:', routeSelect.value);
         
         const selectedRoute = this.getSelectedRoute();
         if (!selectedRoute) {
-            console.log('selectedRouteが取得できない');
             return;
         }
-
-        console.log('処理対象のアクション:', this.selectedActionButton);
 
         switch (this.selectedActionButton) {
             case 'add':
@@ -179,14 +169,8 @@ export class RouteEditor {
 
     // 地図にウェイポイントを追加
     addWaypointToRoute(latlng, routeData) {
-        console.log('=== addWaypointToRoute 開始 ===');
-        console.log('クリック位置:', latlng);
-        console.log('選択されたルート:', routeData);
-        console.log('現在のウェイポイント数:', routeData.wayPoint ? routeData.wayPoint.length : 0);
-        
-        // より簡素化：GPSポイントとの重複のみチェック（他のルートとの重複は許可）
+        // GPSポイントとの重複のみチェック（他のルートとの重複は許可）
         if (this.isNearGPSPoint(latlng)) {
-            console.log('GPSポイントに近いため、追加をスキップ');
             return;
         }
 
@@ -315,46 +299,30 @@ export class RouteEditor {
 
     // 既存のポイントかどうかをチェック（指定されたルート以外をチェック）
     isExistingPoint(latlng, excludeRoute = null) {
-        console.log('=== isExistingPoint開始 ===');
-        console.log('チェック位置:', latlng);
-        console.log('除外ルート:', excludeRoute);
-        console.log('ロード済みルート数:', this.loadedRoutes.length);
-        
         // GPSポイントとの重複をチェック
         if (this.gpsData && this.gpsData.gpsPoints) {
-            console.log('GPSポイント数:', this.gpsData.gpsPoints.length);
             for (const gpsPoint of this.gpsData.gpsPoints) {
                 const distance = latlng.distanceTo([gpsPoint.latitude, gpsPoint.longitude]);
                 if (distance < 10) { // 10メートル以内の場合は既存とみなす
-                    console.log('GPSポイントとの距離が近すぎる:', distance);
                     return true;
                 }
             }
         }
 
         // 他のルートのウェイポイントとの重複をチェック（除外ルート以外）
-        for (let i = 0; i < this.loadedRoutes.length; i++) {
-            const route = this.loadedRoutes[i];
-            console.log(`ルート${i}をチェック:`, route === excludeRoute ? '（除外ルート）' : '');
-            
+        for (const route of this.loadedRoutes) {
             // excludeRouteが指定されている場合はそのルートをスキップ
             if (excludeRoute && route === excludeRoute) {
-                console.log('除外ルートなのでスキップ');
                 continue;
             }
             
             const wayPoints = route.wayPoint || route.wayPoints || route.points;
             if (wayPoints && Array.isArray(wayPoints)) {
-                console.log(`ルート${i}のウェイポイント数:`, wayPoints.length);
-                for (let j = 0; j < wayPoints.length; j++) {
-                    const point = wayPoints[j];
+                for (const point of wayPoints) {
                     const mapPosition = this.convertImageToMapCoordinates(point.imageX, point.imageY);
                     if (mapPosition) {
                         const distance = latlng.distanceTo(mapPosition);
-                        console.log(`ウェイポイント${j}との距離:`, distance);
-                        // 距離を3メートル未満に変更（より厳密に）
-                        if (distance < 3) {
-                            console.log('既存のウェイポイントとの距離が近すぎる');
+                        if (distance < 3) { // 3メートル未満の場合は既存とみなす
                             return true;
                         }
                     }
@@ -362,7 +330,6 @@ export class RouteEditor {
             }
         }
 
-        console.log('既存ポイントではない');
         return false;
     }
 
@@ -403,25 +370,18 @@ export class RouteEditor {
     getSelectedRoute() {
         const routeSelect = document.getElementById('routeSelect');
         if (!routeSelect) {
-            console.log('routeSelectが見つかりません');
             return null;
         }
 
         const selectedValue = routeSelect.value;
-        console.log('選択されているオプション値:', selectedValue);
         
         // より柔軟なマッチング：startPoint ～ endPointの部分で一致を判定
-        const matchedRoute = this.loadedRoutes.find(route => {
+        return this.loadedRoutes.find(route => {
             const startPoint = route.startPoint || route.start || route.startPointId || (route.routeInfo && route.routeInfo.startPoint);
             const endPoint = route.endPoint || route.end || route.endPointId || (route.routeInfo && route.routeInfo.endPoint);
             const routePrefix = `${startPoint} ～ ${endPoint}（`;
-            const isMatch = selectedValue.startsWith(routePrefix);
-            console.log(`ルート "${startPoint} ～ ${endPoint}"`, '一致:', isMatch);
-            return isMatch;
+            return selectedValue.startsWith(routePrefix);
         });
-        
-        console.log('getSelectedRoute結果:', matchedRoute);
-        return matchedRoute;
     }
 
     // カーソルアイコンを更新
@@ -697,7 +657,9 @@ export class RouteEditor {
     // 特定のルートのオプション値を更新（選択状態を維持）
     updateRouteOptionValue(routeData) {
         const routeSelect = document.getElementById('routeSelect');
-        if (!routeSelect) return;
+        if (!routeSelect) {
+            return;
+        }
 
         const startPoint = routeData.startPoint || routeData.start || routeData.startPointId || (routeData.routeInfo && routeData.routeInfo.startPoint);
         const endPoint = routeData.endPoint || routeData.end || routeData.endPointId || (routeData.routeInfo && routeData.routeInfo.endPoint);
@@ -706,7 +668,9 @@ export class RouteEditor {
         const newOptionValue = `${startPoint} ～ ${endPoint}（${waypointCount}）`;
 
         // 現在選択されているオプションを見つけて更新
-        for (let option of routeSelect.options) {
+        for (let i = 0; i < routeSelect.options.length; i++) {
+            const option = routeSelect.options[i];
+            
             // 既存のオプションが同じルートを指している場合（waypointCountが異なる可能性がある）
             if (option.value.startsWith(`${startPoint} ～ ${endPoint}（`) && option.value.endsWith('）')) {
                 option.value = newOptionValue;
