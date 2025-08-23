@@ -60,6 +60,11 @@ export class RouteEditor {
                 this.toggleActionButton('delete', deleteRouteBtn);
             });
         }
+
+        // 地図クリックイベントハンドラー
+        this.map.on('click', (e) => {
+            this.onMapClick(e);
+        });
     }
 
     // 複数のルートJSONファイルを一度に読み込む
@@ -126,11 +131,264 @@ export class RouteEditor {
         // クリックしたボタンが現在選択されているボタンと同じ場合は未選択状態にする
         if (this.selectedActionButton === action) {
             this.selectedActionButton = null;
+            this.updateMapCursor();
         } else {
             // 新しいボタンを選択状態にする
             this.selectedActionButton = action;
             buttonElement.classList.add('selected');
+            this.updateMapCursor();
         }
+    }
+
+    // 地図クリック時の処理
+    onMapClick(e) {
+        if (!this.selectedActionButton) {
+            return;
+        }
+
+        const routeSelect = document.getElementById('routeSelect');
+        if (!routeSelect || !routeSelect.value) {
+            this.showErrorMessage('エラー', 'ルートを選択してください。');
+            return;
+        }
+
+        const selectedRoute = this.getSelectedRoute();
+        if (!selectedRoute) {
+            return;
+        }
+
+        switch (this.selectedActionButton) {
+            case 'add':
+                this.addWaypointToRoute(e.latlng, selectedRoute);
+                break;
+            case 'delete':
+                this.deleteWaypointFromRoute(e.latlng, selectedRoute);
+                break;
+        }
+    }
+
+    // 地図にウェイポイントを追加
+    addWaypointToRoute(latlng, routeData) {
+        // クリックした位置が既存のポイントやウェイポイントかチェック
+        if (this.isExistingPoint(latlng)) {
+            return;
+        }
+
+        // 地図座標を画像座標に変換
+        const imageCoords = this.convertMapToImageCoordinates(latlng.lat, latlng.lng);
+        if (!imageCoords) {
+            this.showErrorMessage('エラー', '画像座標への変換に失敗しました。');
+            return;
+        }
+
+        // 新しいウェイポイントを作成
+        const newWaypoint = {
+            imageX: imageCoords.x,
+            imageY: imageCoords.y
+        };
+
+        // ルートデータのウェイポイント配列に追加
+        const wayPoints = routeData.wayPoint || routeData.wayPoints || routeData.points;
+        if (wayPoints && Array.isArray(wayPoints)) {
+            wayPoints.push(newWaypoint);
+        } else {
+            routeData.wayPoint = [newWaypoint];
+        }
+
+        // wayPointCountを更新
+        if (routeData.wayPointCount !== undefined) {
+            routeData.wayPointCount = (routeData.wayPoint || routeData.wayPoints || routeData.points).length;
+        }
+
+        // 地図を再描画
+        this.displayAllRoutes(routeData);
+    }
+
+    // ウェイポイントを削除
+    deleteWaypointFromRoute(latlng, routeData) {
+        const wayPoints = routeData.wayPoint || routeData.wayPoints || routeData.points;
+        if (!wayPoints || !Array.isArray(wayPoints)) {
+            return;
+        }
+
+        // クリックした位置から最も近いウェイポイントを探す
+        let closestIndex = -1;
+        let minDistance = Infinity;
+        const threshold = 50; // ピクセル単位の閾値
+
+        wayPoints.forEach((point, index) => {
+            const mapPosition = this.convertImageToMapCoordinates(point.imageX, point.imageY);
+            if (mapPosition) {
+                const marker = L.marker(mapPosition);
+                const markerPixel = this.map.latLngToContainerPoint(marker.getLatLng());
+                const clickPixel = this.map.latLngToContainerPoint(latlng);
+                
+                const distance = markerPixel.distanceTo(clickPixel);
+                if (distance < threshold && distance < minDistance) {
+                    minDistance = distance;
+                    closestIndex = index;
+                }
+            }
+        });
+
+        // 最も近いウェイポイントを削除
+        if (closestIndex !== -1) {
+            wayPoints.splice(closestIndex, 1);
+            
+            // wayPointCountを更新
+            if (routeData.wayPointCount !== undefined) {
+                routeData.wayPointCount = wayPoints.length;
+            }
+
+            // 地図を再描画
+            this.displayAllRoutes(routeData);
+        }
+    }
+
+    // 既存のポイントかどうかをチェック
+    isExistingPoint(latlng) {
+        // GPSポイントとの重複をチェック
+        if (this.gpsData && this.gpsData.gpsPoints) {
+            for (const gpsPoint of this.gpsData.gpsPoints) {
+                const distance = latlng.distanceTo([gpsPoint.latitude, gpsPoint.longitude]);
+                if (distance < 10) { // 10メートル以内の場合は既存とみなす
+                    return true;
+                }
+            }
+        }
+
+        // 他のルートのウェイポイントとの重複をチェック
+        for (const route of this.loadedRoutes) {
+            const wayPoints = route.wayPoint || route.wayPoints || route.points;
+            if (wayPoints && Array.isArray(wayPoints)) {
+                for (const point of wayPoints) {
+                    const mapPosition = this.convertImageToMapCoordinates(point.imageX, point.imageY);
+                    if (mapPosition) {
+                        const distance = latlng.distanceTo(mapPosition);
+                        if (distance < 10) { // 10メートル以内の場合は既存とみなす
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // 地図座標を画像座標に変換
+    convertMapToImageCoordinates(lat, lng) {
+        if (!this.imageOverlay || !this.imageOverlay.imageOverlay) {
+            return null;
+        }
+
+        const overlay = this.imageOverlay.imageOverlay;
+        const bounds = overlay.getBounds();
+        const imageElement = overlay.getElement();
+
+        if (!imageElement) {
+            return null;
+        }
+
+        // 画像の元のサイズを取得
+        const imageNaturalWidth = imageElement.naturalWidth;
+        const imageNaturalHeight = imageElement.naturalHeight;
+
+        if (imageNaturalWidth === 0 || imageNaturalHeight === 0) {
+            return null;
+        }
+
+        // 地図座標から画像内の相対位置を計算
+        const relativeX = (lng - bounds.getWest()) / (bounds.getEast() - bounds.getWest());
+        const relativeY = (bounds.getNorth() - lat) / (bounds.getNorth() - bounds.getSouth());
+
+        // 画像座標に変換
+        const imageX = relativeX * imageNaturalWidth;
+        const imageY = relativeY * imageNaturalHeight;
+
+        return { x: imageX, y: imageY };
+    }
+
+    // 選択されているルートを取得
+    getSelectedRoute() {
+        const routeSelect = document.getElementById('routeSelect');
+        if (!routeSelect) return null;
+
+        const selectedValue = routeSelect.value;
+        return this.loadedRoutes.find(route => {
+            const startPoint = route.startPoint || route.start || route.startPointId || (route.routeInfo && route.routeInfo.startPoint);
+            const endPoint = route.endPoint || route.end || route.endPointId || (route.routeInfo && route.routeInfo.endPoint);
+            const wayPoint = route.wayPoint || route.wayPoints || route.points;
+            const waypointCount = wayPoint ? wayPoint.length : 0;
+            return `${startPoint} ～ ${endPoint}（${waypointCount}）` === selectedValue;
+        });
+    }
+
+    // カーソルアイコンを更新
+    updateMapCursor() {
+        const mapContainer = this.map.getContainer();
+        
+        switch (this.selectedActionButton) {
+            case 'add':
+                mapContainer.style.cursor = 'crosshair';
+                break;
+            case 'move':
+                mapContainer.style.cursor = 'move';
+                break;
+            case 'delete':
+                mapContainer.style.cursor = 'pointer';
+                break;
+            default:
+                mapContainer.style.cursor = '';
+                break;
+        }
+
+        // 既存のマーカーのドラッグ可能状態を更新
+        this.updateMarkerDraggableState();
+    }
+
+    // マーカーのドラッグ可能状態を更新
+    updateMarkerDraggableState() {
+        const selectedRoute = this.getSelectedRoute();
+        
+        this.waypointMarkers.forEach(marker => {
+            if (marker.routeData === selectedRoute && this.selectedActionButton === 'move') {
+                marker.dragging.enable();
+                
+                // ドラッグイベントを追加（重複追加を防ぐため一旦削除）
+                marker.off('dragend');
+                marker.on('dragend', (e) => {
+                    this.onWaypointDragEnd(e, marker.waypointData, marker.routeData);
+                });
+            } else {
+                marker.dragging.disable();
+                marker.off('dragend');
+            }
+        });
+    }
+
+    // ウェイポイントのドラッグ終了時の処理
+    onWaypointDragEnd(e, waypointData, routeData) {
+        const newPosition = e.target.getLatLng();
+        
+        // 新しい地図座標を画像座標に変換
+        const imageCoords = this.convertMapToImageCoordinates(newPosition.lat, newPosition.lng);
+        if (!imageCoords) {
+            // 変換に失敗した場合は元の位置に戻す
+            const oldPosition = this.convertImageToMapCoordinates(waypointData.imageX, waypointData.imageY);
+            if (oldPosition) {
+                e.target.setLatLng(oldPosition);
+            }
+            this.showErrorMessage('エラー', '画像座標への変換に失敗しました。');
+            return;
+        }
+
+        // ウェイポイントデータを更新
+        waypointData.imageX = imageCoords.x;
+        waypointData.imageY = imageCoords.y;
+
+        // ルートセレクターの値を更新（ウェイポイント数が変わったため）
+        this.updateRouteSelector();
     }
 
     addRouteToMap(routeData, isSelected = false) {
@@ -168,10 +426,21 @@ export class RouteEditor {
                         
                         const marker = L.marker(mapPosition, {
                             icon: diamondIcon,
-                            draggable: false,
+                            draggable: isSelected && this.selectedActionButton === 'move',
                             zIndexOffset: isSelected ? 1000 : 500,
                             pane: 'waypointMarkers'
                         }).addTo(this.map);
+
+                        // ドラッグ終了時の処理を追加
+                        if (isSelected && this.selectedActionButton === 'move') {
+                            marker.on('dragend', (e) => {
+                                this.onWaypointDragEnd(e, point, routeData);
+                            });
+                        }
+                        
+                        // マーカーにウェイポイントデータを保存
+                        marker.waypointData = point;
+                        marker.routeData = routeData;
                         
                         this.waypointMarkers.push(marker);
                     } else {
