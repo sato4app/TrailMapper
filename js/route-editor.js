@@ -169,8 +169,8 @@ export class RouteEditor {
 
     // 地図にウェイポイントを追加
     addWaypointToRoute(latlng, routeData) {
-        // クリックした位置が既存のポイントやウェイポイントかチェック
-        if (this.isExistingPoint(latlng)) {
+        // クリックした位置が既存のポイントやウェイポイントかチェック（選択されたルート以外）
+        if (this.isExistingPoint(latlng, routeData)) {
             return;
         }
 
@@ -214,18 +214,22 @@ export class RouteEditor {
         // クリックした位置から最も近いウェイポイントを探す
         let closestIndex = -1;
         let minDistance = Infinity;
-        const threshold = 50; // ピクセル単位の閾値
+        const threshold = 100; // ピクセル単位の閾値を増やす
 
         wayPoints.forEach((point, index) => {
             const mapPosition = this.convertImageToMapCoordinates(point.imageX, point.imageY);
             if (mapPosition) {
-                const marker = L.marker(mapPosition);
-                const markerPixel = this.map.latLngToContainerPoint(marker.getLatLng());
-                const clickPixel = this.map.latLngToContainerPoint(latlng);
+                // 地図座標での距離を計算（メートル単位）
+                const mapDistance = latlng.distanceTo(mapPosition);
                 
-                const distance = markerPixel.distanceTo(clickPixel);
-                if (distance < threshold && distance < minDistance) {
-                    minDistance = distance;
+                // ピクセル距離も計算
+                const markerPixel = this.map.latLngToContainerPoint(mapPosition);
+                const clickPixel = this.map.latLngToContainerPoint(latlng);
+                const pixelDistance = markerPixel.distanceTo(clickPixel);
+                
+                // どちらかの条件を満たせば削除対象とする
+                if ((mapDistance < 50 || pixelDistance < threshold) && (mapDistance < minDistance || pixelDistance < minDistance)) {
+                    minDistance = Math.min(mapDistance, pixelDistance);
                     closestIndex = index;
                 }
             }
@@ -242,11 +246,40 @@ export class RouteEditor {
 
             // 地図を再描画
             this.displayAllRoutes(routeData);
+        } else {
+            // 削除対象が見つからなかった場合のメッセージ
+            console.log('削除対象のウェイポイントが見つかりませんでした');
         }
     }
 
-    // 既存のポイントかどうかをチェック
-    isExistingPoint(latlng) {
+    // 指定されたウェイポイントを直接削除
+    deleteSpecificWaypoint(targetPoint, routeData) {
+        const wayPoints = routeData.wayPoint || routeData.wayPoints || routeData.points;
+        if (!wayPoints || !Array.isArray(wayPoints)) {
+            return;
+        }
+
+        // 対象のウェイポイントを検索
+        const targetIndex = wayPoints.findIndex(point => 
+            point.imageX === targetPoint.imageX && point.imageY === targetPoint.imageY
+        );
+
+        if (targetIndex !== -1) {
+            // ウェイポイントを削除
+            wayPoints.splice(targetIndex, 1);
+            
+            // wayPointCountを更新
+            if (routeData.wayPointCount !== undefined) {
+                routeData.wayPointCount = wayPoints.length;
+            }
+
+            // 地図を再描画
+            this.displayAllRoutes(routeData);
+        }
+    }
+
+    // 既存のポイントかどうかをチェック（指定されたルート以外をチェック）
+    isExistingPoint(latlng, excludeRoute = null) {
         // GPSポイントとの重複をチェック
         if (this.gpsData && this.gpsData.gpsPoints) {
             for (const gpsPoint of this.gpsData.gpsPoints) {
@@ -257,8 +290,13 @@ export class RouteEditor {
             }
         }
 
-        // 他のルートのウェイポイントとの重複をチェック
+        // 他のルートのウェイポイントとの重複をチェック（除外ルート以外）
         for (const route of this.loadedRoutes) {
+            // excludeRouteが指定されている場合はそのルートをスキップ
+            if (excludeRoute && route === excludeRoute) {
+                continue;
+            }
+            
             const wayPoints = route.wayPoint || route.wayPoints || route.points;
             if (wayPoints && Array.isArray(wayPoints)) {
                 for (const point of wayPoints) {
@@ -353,7 +391,10 @@ export class RouteEditor {
         
         this.waypointMarkers.forEach(marker => {
             if (marker.routeData === selectedRoute && this.selectedActionButton === 'move') {
-                marker.dragging.enable();
+                // ドラッグを有効化
+                if (marker.dragging) {
+                    marker.dragging.enable();
+                }
                 
                 // ドラッグイベントを追加（重複追加を防ぐため一旦削除）
                 marker.off('dragend');
@@ -361,7 +402,10 @@ export class RouteEditor {
                     this.onWaypointDragEnd(e, marker.waypointData, marker.routeData);
                 });
             } else {
-                marker.dragging.disable();
+                // ドラッグを無効化
+                if (marker.dragging) {
+                    marker.dragging.disable();
+                }
                 marker.off('dragend');
             }
         });
@@ -426,21 +470,36 @@ export class RouteEditor {
                         
                         const marker = L.marker(mapPosition, {
                             icon: diamondIcon,
-                            draggable: isSelected && this.selectedActionButton === 'move',
+                            draggable: true, // 常にdraggableをtrueにして、後で制御する
                             zIndexOffset: isSelected ? 1000 : 500,
                             pane: 'waypointMarkers'
                         }).addTo(this.map);
 
-                        // ドラッグ終了時の処理を追加
-                        if (isSelected && this.selectedActionButton === 'move') {
+                        // マーカーにウェイポイントデータを保存
+                        marker.waypointData = point;
+                        marker.routeData = routeData;
+                        
+                        // 初期状態では選択されたルート以外はドラッグ無効
+                        if (!isSelected || this.selectedActionButton !== 'move') {
+                            if (marker.dragging) {
+                                marker.dragging.disable();
+                            }
+                        } else {
+                            // ドラッグ終了時の処理を追加
                             marker.on('dragend', (e) => {
                                 this.onWaypointDragEnd(e, point, routeData);
                             });
                         }
-                        
-                        // マーカーにウェイポイントデータを保存
-                        marker.waypointData = point;
-                        marker.routeData = routeData;
+
+                        // 削除モード用のクリックイベントを追加
+                        marker.on('click', (e) => {
+                            if (isSelected && this.selectedActionButton === 'delete') {
+                                // マーカーを直接削除
+                                this.deleteSpecificWaypoint(point, routeData);
+                                // 地図クリックイベントの伝播を停止
+                                L.DomEvent.stopPropagation(e);
+                            }
+                        });
                         
                         this.waypointMarkers.push(marker);
                     } else {
