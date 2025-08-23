@@ -244,6 +244,9 @@ export class RouteEditor {
                 routeData.wayPointCount = wayPoints.length;
             }
 
+            // ルートセレクターのオプション値を更新
+            this.updateRouteOptionValue(routeData);
+            
             // 地図を再描画
             this.displayAllRoutes(routeData);
         } else {
@@ -273,6 +276,9 @@ export class RouteEditor {
                 routeData.wayPointCount = wayPoints.length;
             }
 
+            // ルートセレクターのオプション値を更新
+            this.updateRouteOptionValue(routeData);
+            
             // 地図を再描画
             this.displayAllRoutes(routeData);
         }
@@ -431,8 +437,8 @@ export class RouteEditor {
         waypointData.imageX = imageCoords.x;
         waypointData.imageY = imageCoords.y;
 
-        // ルートセレクターの値を更新（ウェイポイント数が変わったため）
-        this.updateRouteSelector();
+        // ルートセレクターのオプション値を更新（ウェイポイント数が変わったため）
+        this.updateRouteOptionValue(routeData);
     }
 
     addRouteToMap(routeData, isSelected = false) {
@@ -629,6 +635,29 @@ export class RouteEditor {
             // 最後に読み込んだルートを選択
             routeSelect.value = optionValue;
             this.updateRouteDetails(lastRoute);
+        }
+    }
+
+    // 特定のルートのオプション値を更新（選択状態を維持）
+    updateRouteOptionValue(routeData) {
+        const routeSelect = document.getElementById('routeSelect');
+        if (!routeSelect) return;
+
+        const startPoint = routeData.startPoint || routeData.start || routeData.startPointId || (routeData.routeInfo && routeData.routeInfo.startPoint);
+        const endPoint = routeData.endPoint || routeData.end || routeData.endPointId || (routeData.routeInfo && routeData.routeInfo.endPoint);
+        const wayPoint = routeData.wayPoint || routeData.wayPoints || routeData.points;
+        const waypointCount = wayPoint ? wayPoint.length : 0;
+        const newOptionValue = `${startPoint} ～ ${endPoint}（${waypointCount}）`;
+
+        // 現在選択されているオプションを見つけて更新
+        for (let option of routeSelect.options) {
+            // 既存のオプションが同じルートを指している場合（waypointCountが異なる可能性がある）
+            if (option.value.startsWith(`${startPoint} ～ ${endPoint}（`) && option.value.endsWith('）')) {
+                option.value = newOptionValue;
+                option.textContent = newOptionValue;
+                routeSelect.value = newOptionValue;
+                break;
+            }
         }
     }
     
