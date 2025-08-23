@@ -201,6 +201,9 @@ export class RouteEditor {
             routeData.wayPointCount = (routeData.wayPoint || routeData.wayPoints || routeData.points).length;
         }
 
+        // ルートが編集されたことをマーク
+        routeData.isEdited = true;
+        
         // ルートセレクターのオプション値を更新
         this.updateRouteOptionValue(routeData);
         
@@ -248,6 +251,9 @@ export class RouteEditor {
                 routeData.wayPointCount = wayPoints.length;
             }
 
+            // ルートが編集されたことをマーク
+            routeData.isEdited = true;
+
             // ルートセレクターのオプション値を更新
             this.updateRouteOptionValue(routeData);
             
@@ -279,6 +285,9 @@ export class RouteEditor {
             if (routeData.wayPointCount !== undefined) {
                 routeData.wayPointCount = wayPoints.length;
             }
+
+            // ルートが編集されたことをマーク
+            routeData.isEdited = true;
 
             // ルートセレクターのオプション値を更新
             this.updateRouteOptionValue(routeData);
@@ -456,6 +465,9 @@ export class RouteEditor {
         // ウェイポイントデータを更新
         waypointData.imageX = imageCoords.x;
         waypointData.imageY = imageCoords.y;
+
+        // ルートが編集されたことをマーク
+        routeData.isEdited = true;
 
         // ルートセレクターのオプション値を更新（ウェイポイント数が変わったため）
         this.updateRouteOptionValue(routeData);
@@ -669,14 +681,16 @@ export class RouteEditor {
         const endPoint = routeData.endPoint || routeData.end || routeData.endPointId || (routeData.routeInfo && routeData.routeInfo.endPoint);
         const wayPoint = routeData.wayPoint || routeData.wayPoints || routeData.points;
         const waypointCount = wayPoint ? wayPoint.length : 0;
-        const newOptionValue = `${startPoint} ～ ${endPoint}（${waypointCount}）`;
+        const editedMark = routeData.isEdited ? '*' : '';
+        const newOptionValue = `${startPoint} ～ ${endPoint}（${waypointCount}）${editedMark}`;
 
         // 現在選択されているオプションを見つけて更新
         for (let i = 0; i < routeSelect.options.length; i++) {
             const option = routeSelect.options[i];
             
-            // 既存のオプションが同じルートを指している場合（waypointCountが異なる可能性がある）
-            if (option.value.startsWith(`${startPoint} ～ ${endPoint}（`) && option.value.endsWith('）')) {
+            // 既存のオプションが同じルートを指している場合（waypointCountや"*"マークが異なる可能性がある）
+            const routePrefix = `${startPoint} ～ ${endPoint}（`;
+            if (option.value.startsWith(routePrefix) && (option.value.endsWith('）') || option.value.endsWith('）*'))) {
                 option.value = newOptionValue;
                 option.textContent = newOptionValue;
                 routeSelect.value = newOptionValue;
