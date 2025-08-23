@@ -120,6 +120,7 @@ export class RouteEditor {
         const allButtons = document.querySelectorAll('.route-action-btn');
         allButtons.forEach(btn => btn.classList.remove('selected'));
         this.selectedActionButton = null;
+        this.updateMapCursor();
     }
 
     // ルート操作ボタンの選択・未選択状態を切り替える
@@ -200,6 +201,9 @@ export class RouteEditor {
             routeData.wayPointCount = (routeData.wayPoint || routeData.wayPoints || routeData.points).length;
         }
 
+        // ルートセレクターのオプション値を更新
+        this.updateRouteOptionValue(routeData);
+        
         // 地図を再描画
         this.displayAllRoutes(routeData);
     }
@@ -692,18 +696,14 @@ export class RouteEditor {
         const routeSelect = document.getElementById('routeSelect');
         if (!routeSelect) return;
         
-        const selectedValue = routeSelect.value;
-        const selectedRoute = this.loadedRoutes.find(route => {
-            const startPoint = route.startPoint || route.start || route.startPointId || (route.routeInfo && route.routeInfo.startPoint);
-            const endPoint = route.endPoint || route.end || route.endPointId || (route.routeInfo && route.routeInfo.endPoint);
-            const wayPoint = route.wayPoint || route.wayPoints || route.points;
-            const waypointCount = wayPoint ? wayPoint.length : 0;
-            return `${startPoint} ～ ${endPoint}（${waypointCount}）` === selectedValue;
-        });
+        // getSelectedRouteメソッドを使用して一貫性のある選択方法を使う
+        const selectedRoute = this.getSelectedRoute();
         
         if (selectedRoute) {
             this.updateRouteDetails(selectedRoute);
             this.displayAllRoutes(selectedRoute);
+            // マーカーのドラッグ可能状態を更新
+            this.updateMarkerDraggableState();
         }
     }
 
