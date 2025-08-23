@@ -302,11 +302,11 @@
     border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.route-action-left {
+.route-action-top {
     border-top: 4px solid #007bff;
 }
 
-.route-action-right {
+.route-action-bottom {
     border-top: 4px solid #28a745;
 }
 
@@ -328,7 +328,7 @@
     text-overflow: ellipsis;
 }
 
-.route-action-right .route-action-btn {
+.route-action-bottom .route-action-btn {
     border-color: #28a745;
     color: #28a745;
 }
@@ -338,7 +338,7 @@
     border-color: #0056b3;
 }
 
-.route-action-right .route-action-btn:hover {
+.route-action-bottom .route-action-btn:hover {
     border-color: #1e7e34;
 }
 
@@ -348,7 +348,7 @@
     border-color: #0056b3;
 }
 
-.route-action-right .route-action-btn.selected {
+.route-action-bottom .route-action-btn.selected {
     background-color: #28a745;
     border-color: #1e7e34;
 }
@@ -357,7 +357,7 @@
     background-color: #0056b3;
 }
 
-.route-action-right .route-action-btn.selected:hover {
+.route-action-bottom .route-action-btn.selected:hover {
     background-color: #1e7e34;
 }
 
