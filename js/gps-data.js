@@ -163,7 +163,7 @@ export class GPSData {
         return `#${(r << 16 | g << 8 | b).toString(16).padStart(6, '0')}`;
     }
 
-    addGPSMarkersToMap(gpsData, markerColor = '#28a745') {
+    addGPSMarkersToMap(gpsData, markerColor = '#228b22') {
         // 既存のGPSマーカーをクリア
         this.clearGPSMarkers();
         
