@@ -107,7 +107,8 @@ export class RouteEditor {
                         this.showWarningMessage('ルートJSONファイル検証警告', validationResult.warnings.join('\n'));
                     }
                     
-                    // ルートデータを保存
+                    // ルートデータを保存（type、indexが設定されていない場合は初期化）
+                    this.initializeWaypointData(routeData);
                     this.loadedRoutes.push(routeData);
                     this.updateRouteSelector();
                     
@@ -192,14 +193,18 @@ export class RouteEditor {
             return;
         }
 
-        // 新しいウェイポイントを作成
+        // 新しいウェイポイントを作成（四捨五入して整数化、type、index追加）
+        const wayPoints = routeData.wayPoint || routeData.wayPoints || routeData.points || [];
+        const nextIndex = this.getNextWaypointIndex(routeData);
+        
         const newWaypoint = {
-            imageX: imageCoords.x,
-            imageY: imageCoords.y
+            type: "waypoint",
+            index: nextIndex,
+            imageX: Math.round(imageCoords.x),
+            imageY: Math.round(imageCoords.y)
         };
 
         // ルートデータのウェイポイント配列に追加
-        const wayPoints = routeData.wayPoint || routeData.wayPoints || routeData.points;
         if (wayPoints && Array.isArray(wayPoints)) {
             wayPoints.push(newWaypoint);
         } else {
@@ -219,6 +224,55 @@ export class RouteEditor {
         
         // 地図を再描画
         this.displayAllRoutes(routeData);
+    }
+
+    // 次のウェイポイントindexを取得
+    getNextWaypointIndex(routeData) {
+        const wayPoints = routeData.wayPoint || routeData.wayPoints || routeData.points || [];
+        
+        if (wayPoints.length === 0) {
+            return 1; // 最初のウェイポイントはindex 1から開始
+        }
+        
+        // 既存のindex値の最大値を取得
+        const existingIndexes = wayPoints
+            .map(point => point.index)
+            .filter(index => typeof index === 'number' && !isNaN(index));
+        
+        if (existingIndexes.length === 0) {
+            return 1; // index が設定されていないウェイポイントがある場合
+        }
+        
+        return Math.max(...existingIndexes) + 1;
+    }
+
+    // ウェイポイントデータを初期化（type、indexが設定されていない場合）
+    initializeWaypointData(routeData) {
+        const wayPoints = routeData.wayPoint || routeData.wayPoints || routeData.points;
+        
+        if (!wayPoints || !Array.isArray(wayPoints)) {
+            return;
+        }
+        
+        wayPoints.forEach((point, arrayIndex) => {
+            // type が設定されていない場合は "waypoint" を設定
+            if (!point.type) {
+                point.type = "waypoint";
+            }
+            
+            // index が設定されていない場合は配列のインデックス + 1 を設定
+            if (point.index === undefined || point.index === null) {
+                point.index = arrayIndex + 1;
+            }
+            
+            // imageX, imageY を整数化（既存データの場合）
+            if (point.imageX !== undefined) {
+                point.imageX = Math.round(point.imageX);
+            }
+            if (point.imageY !== undefined) {
+                point.imageY = Math.round(point.imageY);
+            }
+        });
     }
 
     // ウェイポイントを削除
@@ -472,9 +526,9 @@ export class RouteEditor {
             return;
         }
 
-        // ウェイポイントデータを更新
-        waypointData.imageX = imageCoords.x;
-        waypointData.imageY = imageCoords.y;
+        // ウェイポイントデータを更新（四捨五入して整数化）
+        waypointData.imageX = Math.round(imageCoords.x);
+        waypointData.imageY = Math.round(imageCoords.y);
 
         // ルートが編集されたことをマーク
         routeData.isEdited = true;
@@ -863,15 +917,17 @@ export class RouteEditor {
             throw new Error('保存可能なルートデータがありません。');
         }
 
-        // 保存データの構築（読み込み時と同じ構造）
+        // 保存データの構築（読み込み時と同じ構造、type・index・四捨五入された座標を含む）
         const saveData = {
             imageReference: this.imageOverlay.currentImageFileName || '',
             startPoint: routeData.startPoint || routeData.start || routeData.startPointId || (routeData.routeInfo && routeData.routeInfo.startPoint) || '',
             endPoint: routeData.endPoint || routeData.end || routeData.endPointId || (routeData.routeInfo && routeData.routeInfo.endPoint) || '',
             wayPointCount: wayPoint.length,
-            wayPoint: wayPoint.map(point => ({
-                imageX: point.imageX,
-                imageY: point.imageY
+            wayPoint: wayPoint.map((point, arrayIndex) => ({
+                type: point.type || "waypoint",
+                index: point.index !== undefined ? point.index : arrayIndex + 1,
+                imageX: Math.round(point.imageX || 0),
+                imageY: Math.round(point.imageY || 0)
             }))
         };
 
