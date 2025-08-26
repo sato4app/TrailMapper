@@ -353,3 +353,16 @@
     background-color: #1e7e34;
 }
 
+/* 個別ボタンの幅設定 */
+#segmentRouteBtn,
+#optimizeRouteBtn,
+#segmentRouteBtn {
+    flex: none;
+    width: 60px;
+}
+
+#saveGeoJsonRouteBtn {
+    flex: 1;
+    width: 100px;
+}
+

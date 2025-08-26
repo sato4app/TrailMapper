@@ -1041,15 +1041,9 @@ export class RouteEditor {
             const startPointName = selectedRoute.startPoint || selectedRoute.start || selectedRoute.startPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.startPoint);
             const endPointName = selectedRoute.endPoint || selectedRoute.end || selectedRoute.endPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.endPoint);
             
-            console.log('経路線描画: 開始ポイント名:', startPointName);
-            console.log('経路線描画: 終了ポイント名:', endPointName);
-            
             // 開始・終了ポイントを取得
             const startPoint = this.getGpsPointByName(startPointName);
             const endPoint = this.getGpsPointByName(endPointName);
-            
-            console.log('経路線描画: 取得した開始ポイント:', startPoint);
-            console.log('経路線描画: 取得した終了ポイント:', endPoint);
 
             if (!startPoint) {
                 this.showErrorMessage('エラー', '開始ポイントが見つかりません。');
@@ -1165,8 +1159,6 @@ export class RouteEditor {
                 return;
             }
 
-            console.log('最適化開始: 中間点数:', wayPoints.length);
-
             // 中間点を地図座標に変換
             const waypointCoords = [];
             for (const waypoint of wayPoints) {
@@ -1188,11 +1180,6 @@ export class RouteEditor {
 
             // 最適化後の距離を計算
             const optimizedDistance = this.calculateTotalDistance(startPoint, endPoint, optimizedOrder);
-
-            console.log('最適化結果:');
-            console.log('最適化前距離:', Math.round(originalDistance), 'm');
-            console.log('最適化後距離:', Math.round(optimizedDistance), 'm');
-            console.log('短縮距離:', Math.round(originalDistance - optimizedDistance), 'm');
 
             // 最適化されたindexでwayPointsを更新
             optimizedOrder.forEach((waypoint, index) => {
@@ -1224,22 +1211,6 @@ export class RouteEditor {
 
             // 最適化後に経路線を自動的に引き直す
             this.drawRouteSegments();
-
-            // 結果メッセージを表示
-            const improvement = Math.round(originalDistance - optimizedDistance);
-            let message = `ルートを最適化しました。\n`;
-            message += `最適化前: ${Math.round(originalDistance)}m\n`;
-            message += `最適化後: ${Math.round(optimizedDistance)}m\n`;
-            
-            if (improvement > 0) {
-                message += `短縮: ${improvement}m`;
-            } else if (improvement < 0) {
-                message += `延長: ${Math.abs(improvement)}m`;
-            } else {
-                message += `距離は変わりませんでした。`;
-            }
-            
-            this.showSuccessMessage('最適化完了', message);
 
         } catch (error) {
             this.showErrorMessage('最適化エラー', `ルートの最適化中にエラーが発生しました: ${error.message}`);
