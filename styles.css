@@ -356,7 +356,7 @@
 /* 個別ボタンの幅設定 */
 #saveRouteBtn {
     flex: none;
-    width: 40px;
+    width: 36px;
 }
 
 #segmentRouteBtn,
