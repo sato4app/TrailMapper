@@ -314,7 +314,7 @@
     cursor: pointer;
     text-align: center;
     transition: all 0.2s ease;
-    min-width: 60px;
+    min-width: 40px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
