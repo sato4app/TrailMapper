@@ -356,13 +356,13 @@
 /* 個別ボタンの幅設定 */
 #segmentRouteBtn,
 #optimizeRouteBtn,
-#segmentRouteBtn {
+#clearRouteBtn {
     flex: none;
     width: 60px;
 }
 
 #saveGeoJsonRouteBtn {
     flex: 1;
-    width: 100px;
+    width: 120px;
 }
 
