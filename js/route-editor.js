@@ -45,6 +45,7 @@ export class RouteEditor {
         const addRouteBtn = document.getElementById('addRouteBtn');
         const moveRouteBtn = document.getElementById('moveRouteBtn');
         const deleteRouteBtn = document.getElementById('deleteRouteBtn');
+        const clearRouteBtn = document.getElementById('clearRouteBtn');
         const saveRouteBtn = document.getElementById('saveRouteBtn');
 
         if (addRouteBtn) {
@@ -62,6 +63,12 @@ export class RouteEditor {
         if (deleteRouteBtn) {
             deleteRouteBtn.addEventListener('click', () => {
                 this.toggleActionButton('delete', deleteRouteBtn);
+            });
+        }
+
+        if (clearRouteBtn) {
+            clearRouteBtn.addEventListener('click', () => {
+                this.clearSelectedRoute();
             });
         }
 
@@ -986,5 +993,67 @@ export class RouteEditor {
             ">OK</button>
         `;
         document.body.appendChild(messageBox);
+    }
+
+    // 選択されているルートをクリア（削除）する機能
+    clearSelectedRoute() {
+        const selectedRoute = this.getSelectedRoute();
+        if (!selectedRoute) {
+            this.showErrorMessage('エラー', 'クリアするルートを選択してください。');
+            return;
+        }
+
+        // 確認ダイアログを表示
+        const startPoint = selectedRoute.startPoint || selectedRoute.start || selectedRoute.startPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.startPoint) || 'unknown';
+        const endPoint = selectedRoute.endPoint || selectedRoute.end || selectedRoute.endPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.endPoint) || 'unknown';
+        
+        if (!confirm(`ルート「${startPoint} ～ ${endPoint}」を完全に削除しますか？\n\nこの操作は元に戻すことができません。`)) {
+            return;
+        }
+
+        try {
+            // 1. loadedRoutesから該当ルートを削除
+            const routeIndex = this.loadedRoutes.findIndex(route => route === selectedRoute);
+            if (routeIndex !== -1) {
+                this.loadedRoutes.splice(routeIndex, 1);
+            }
+
+            // 2. ドロップダウンリストから該当オプションを削除
+            const routeSelect = document.getElementById('routeSelect');
+            if (routeSelect) {
+                const routePrefix = `${startPoint} ～ ${endPoint}（`;
+                
+                // 該当するオプションを検索して削除
+                for (let i = routeSelect.options.length - 1; i >= 0; i--) {
+                    const option = routeSelect.options[i];
+                    if (option.value.startsWith(routePrefix) && (option.value.endsWith('）') || option.value.endsWith('）*'))) {
+                        routeSelect.removeChild(option);
+                        break;
+                    }
+                }
+
+                // ドロップダウンを初期状態にリセット
+                if (routeSelect.options.length === 1) { // placeholder optionのみ残っている場合
+                    routeSelect.selectedIndex = 0;
+                } else if (routeSelect.options.length > 1) {
+                    // 他のルートがある場合は最初の有効なオプションを選択
+                    routeSelect.selectedIndex = 1;
+                    this.onRouteSelectionChange();
+                    return; // 他のルートが選択されているので、マーカークリアは不要
+                }
+            }
+
+            // 3. アクションボタンの選択状態をクリア
+            this.clearActionButtonSelection();
+
+            // 4. 地図からマーカーをクリア（全てのルートを再描画）
+            this.displayAllRoutes(null);
+
+            // 成功メッセージを表示
+            this.showSuccessMessage('削除完了', `ルート「${startPoint} ～ ${endPoint}」を削除しました。`);
+            
+        } catch (error) {
+            this.showErrorMessage('削除エラー', `ルートの削除中にエラーが発生しました: ${error.message}`);
+        }
     }
 }
