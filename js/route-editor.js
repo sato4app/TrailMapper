@@ -94,7 +94,7 @@ export class RouteEditor {
         if (optimizeRouteBtn) {
             optimizeRouteBtn.addEventListener('click', () => {
                 this.clearActionButtonSelection();
-                // 最適化機能（未実装）
+                this.optimizeRoute();
             });
         }
 
@@ -1085,7 +1085,7 @@ export class RouteEditor {
             // 線を描画
             if (routeCoordinates.length >= 2) {
                 const routeLine = L.polyline(routeCoordinates, {
-                    color: '#ff6b6b',
+                    color: '#ff0000',
                     weight: 2,
                     opacity: 0.8,
                     smoothFactor: 1,
@@ -1135,6 +1135,185 @@ export class RouteEditor {
             }
         });
         this.routeLines = [];
+    }
+
+    // ルート最適化機能（中間点の順序を最適化して総距離を最小化）
+    optimizeRoute() {
+        const selectedRoute = this.getSelectedRoute();
+        if (!selectedRoute) {
+            this.showErrorMessage('エラー', 'ルートを選択してください。');
+            return;
+        }
+
+        try {
+            // 開始・終了ポイントを取得
+            const startPointName = selectedRoute.startPoint || selectedRoute.start || selectedRoute.startPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.startPoint);
+            const endPointName = selectedRoute.endPoint || selectedRoute.end || selectedRoute.endPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.endPoint);
+            
+            const startPoint = this.getGpsPointByName(startPointName);
+            const endPoint = this.getGpsPointByName(endPointName);
+
+            if (!startPoint || !endPoint) {
+                this.showErrorMessage('エラー', '開始または終了ポイントが見つかりません。');
+                return;
+            }
+
+            // 中間点を取得
+            const wayPoints = selectedRoute.wayPoint || selectedRoute.wayPoints || selectedRoute.points || [];
+            if (wayPoints.length === 0) {
+                this.showErrorMessage('情報', '最適化する中間点がありません。');
+                return;
+            }
+
+            console.log('最適化開始: 中間点数:', wayPoints.length);
+
+            // 中間点を地図座標に変換
+            const waypointCoords = [];
+            for (const waypoint of wayPoints) {
+                const mapPosition = this.convertImageToMapCoordinates(waypoint.imageX, waypoint.imageY);
+                if (mapPosition) {
+                    waypointCoords.push({
+                        ...waypoint,
+                        lat: mapPosition[0],
+                        lng: mapPosition[1]
+                    });
+                }
+            }
+
+            // 最適化前の距離を計算
+            const originalDistance = this.calculateTotalDistance(startPoint, endPoint, waypointCoords);
+
+            // 最適化を実行（貪欲法）
+            const optimizedOrder = this.optimizeWaypointOrder(startPoint, endPoint, waypointCoords);
+
+            // 最適化後の距離を計算
+            const optimizedDistance = this.calculateTotalDistance(startPoint, endPoint, optimizedOrder);
+
+            console.log('最適化結果:');
+            console.log('最適化前距離:', Math.round(originalDistance), 'm');
+            console.log('最適化後距離:', Math.round(optimizedDistance), 'm');
+            console.log('短縮距離:', Math.round(originalDistance - optimizedDistance), 'm');
+
+            // 最適化されたindexでwayPointsを更新
+            optimizedOrder.forEach((waypoint, index) => {
+                waypoint.index = index + 1;
+            });
+
+            // ルートデータを更新
+            if (selectedRoute.wayPoint) {
+                selectedRoute.wayPoint = optimizedOrder;
+            } else if (selectedRoute.wayPoints) {
+                selectedRoute.wayPoints = optimizedOrder;
+            } else if (selectedRoute.points) {
+                selectedRoute.points = optimizedOrder;
+            }
+
+            // wayPointCountを更新
+            if (selectedRoute.wayPointCount !== undefined) {
+                selectedRoute.wayPointCount = optimizedOrder.length;
+            }
+
+            // ルートが編集されたことをマーク
+            selectedRoute.isEdited = true;
+
+            // ルートセレクターのオプション値を更新
+            this.updateRouteOptionValue(selectedRoute);
+
+            // 地図を再描画
+            this.displayAllRoutes(selectedRoute);
+
+            // 結果メッセージを表示
+            const improvement = Math.round(originalDistance - optimizedDistance);
+            let message = `ルートを最適化しました。\n`;
+            message += `最適化前: ${Math.round(originalDistance)}m\n`;
+            message += `最適化後: ${Math.round(optimizedDistance)}m\n`;
+            
+            if (improvement > 0) {
+                message += `短縮: ${improvement}m`;
+            } else if (improvement < 0) {
+                message += `延長: ${Math.abs(improvement)}m`;
+            } else {
+                message += `距離は変わりませんでした。`;
+            }
+            
+            this.showSuccessMessage('最適化完了', message);
+
+        } catch (error) {
+            this.showErrorMessage('最適化エラー', `ルートの最適化中にエラーが発生しました: ${error.message}`);
+        }
+    }
+
+    // 2点間の距離を計算（メートル単位）
+    calculateDistance(point1, point2) {
+        const lat1 = point1.lat || point1.latitude;
+        const lng1 = point1.lng || point1.longitude;
+        const lat2 = point2.lat || point2.latitude;
+        const lng2 = point2.lng || point2.longitude;
+
+        const R = 6371000; // 地球の半径（メートル）
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δφ = (lat2 - lat1) * Math.PI / 180;
+        const Δλ = (lng2 - lng1) * Math.PI / 180;
+
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                  Math.cos(φ1) * Math.cos(φ2) *
+                  Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    }
+
+    // 経路の総距離を計算
+    calculateTotalDistance(startPoint, endPoint, waypoints) {
+        if (waypoints.length === 0) {
+            return this.calculateDistance(startPoint, endPoint);
+        }
+
+        let totalDistance = 0;
+        let currentPoint = startPoint;
+
+        // 開始点から各中間点を経由
+        for (const waypoint of waypoints) {
+            totalDistance += this.calculateDistance(currentPoint, waypoint);
+            currentPoint = waypoint;
+        }
+
+        // 最後の中間点から終了点まで
+        totalDistance += this.calculateDistance(currentPoint, endPoint);
+
+        return totalDistance;
+    }
+
+    // 貪欲法による中間点順序最適化
+    optimizeWaypointOrder(startPoint, endPoint, waypoints) {
+        if (waypoints.length <= 1) {
+            return [...waypoints];
+        }
+
+        const optimizedOrder = [];
+        const remaining = [...waypoints];
+        let currentPoint = startPoint;
+
+        // 貪欲法: 現在地点から最も近い点を順次選択
+        while (remaining.length > 0) {
+            let nearestIndex = 0;
+            let nearestDistance = this.calculateDistance(currentPoint, remaining[0]);
+
+            for (let i = 1; i < remaining.length; i++) {
+                const distance = this.calculateDistance(currentPoint, remaining[i]);
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearestIndex = i;
+                }
+            }
+
+            const nearestWaypoint = remaining.splice(nearestIndex, 1)[0];
+            optimizedOrder.push(nearestWaypoint);
+            currentPoint = nearestWaypoint;
+        }
+
+        return optimizedOrder;
     }
 
     // 選択されているルートをクリア（削除）する機能
