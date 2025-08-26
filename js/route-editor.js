@@ -829,14 +829,26 @@ export class RouteEditor {
             const filename = this.generateSaveFilename(selectedRoute);
             
             // ファイル保存の実行
-            await this.fileHandler.saveJSONWithUserChoice(saveData, filename);
+            const result = await this.fileHandler.saveJSONWithUserChoice(saveData, filename);
             
-            // 保存成功のメッセージ
-            this.showSuccessMessage('保存完了', `ルートデータが保存されました。\nファイル名: ${filename}`);
-            
-            // 編集状態をクリア
-            selectedRoute.isEdited = false;
-            this.updateRouteOptionValue(selectedRoute);
+            // 保存結果に応じて処理
+            if (result.success) {
+                // 保存成功のメッセージ
+                this.showSuccessMessage('保存完了', `ルートデータが保存されました。\nファイル名: ${result.filename || filename}`);
+                
+                // 編集状態をクリア
+                selectedRoute.isEdited = false;
+                this.updateRouteOptionValue(selectedRoute);
+            } else {
+                // キャンセルまたはエラーの場合
+                if (result.error === 'キャンセル') {
+                    // キャンセル時は何もメッセージを表示しない
+                    console.log('保存がキャンセルされました');
+                } else {
+                    // 実際のエラーの場合
+                    this.showErrorMessage('保存エラー', result.error || '保存に失敗しました。');
+                }
+            }
             
         } catch (error) {
             this.showErrorMessage('保存エラー', error.message);
@@ -873,7 +885,13 @@ export class RouteEditor {
 
     // ファイル名の生成（仕様に従う）
     generateSaveFilename(routeData) {
-        const imageFileName = this.imageOverlay.currentImageFileName || 'unknown';
+        let imageFileName = this.imageOverlay.currentImageFileName || 'unknown';
+        
+        // PNG ファイルタイプを除去（.pngが含まれている場合は削除）
+        if (imageFileName.toLowerCase().endsWith('.png')) {
+            imageFileName = imageFileName.slice(0, -4);
+        }
+        
         const startPoint = routeData.startPoint || routeData.start || routeData.startPointId || (routeData.routeInfo && routeData.routeInfo.startPoint) || 'start';
         const endPoint = routeData.endPoint || routeData.end || routeData.endPointId || (routeData.routeInfo && routeData.routeInfo.endPoint) || 'end';
         

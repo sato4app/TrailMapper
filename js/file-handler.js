@@ -132,7 +132,7 @@ export class FileHandler {
      * ユーザーが場所を指定してJSONファイルを保存
      * @param {Object} data - JSON data
      * @param {string} defaultFilename - デフォルトファイル名
-     * @returns {Promise<void>}
+     * @returns {Promise<{success: boolean, filename?: string, error?: string}>} 保存結果
      */
     async saveJSONWithUserChoice(data, defaultFilename) {
         const jsonString = JSON.stringify(data, null, 2);
@@ -165,17 +165,24 @@ export class FileHandler {
                 await writable.close();
                 
                 console.log(`JSONファイルが保存されました: ${fileHandle.name}`);
+                return { success: true, filename: fileHandle.name };
             } else {
                 this.downloadJSON(data, defaultFilename);
+                return { success: true, filename: defaultFilename };
             }
         } catch (error) {
             if (error.name === 'AbortError') {
                 console.log('ファイル保存がキャンセルされました');
-                return;
+                return { success: false, error: 'キャンセル' };
             }
             
             console.error('ファイル保存エラー:', error);
-            this.downloadJSON(data, defaultFilename);
+            try {
+                this.downloadJSON(data, defaultFilename);
+                return { success: true, filename: defaultFilename };
+            } catch (downloadError) {
+                return { success: false, error: error.message };
+            }
         }
     }
 
