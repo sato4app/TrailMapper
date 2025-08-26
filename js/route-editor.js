@@ -1,4 +1,6 @@
 // ルート編集機能を管理するモジュール
+import { FileHandler } from './file-handler.js';
+
 export class RouteEditor {
     constructor(map, imageOverlay, gpsData) {
         this.map = map;
@@ -8,6 +10,7 @@ export class RouteEditor {
         this.loadedRoutes = [];
         this.waypointMarkers = [];
         this.selectedActionButton = null;
+        this.fileHandler = new FileHandler();
         this.setupEventHandlers();
     }
 
@@ -42,6 +45,7 @@ export class RouteEditor {
         const addRouteBtn = document.getElementById('addRouteBtn');
         const moveRouteBtn = document.getElementById('moveRouteBtn');
         const deleteRouteBtn = document.getElementById('deleteRouteBtn');
+        const saveRouteBtn = document.getElementById('saveRouteBtn');
 
         if (addRouteBtn) {
             addRouteBtn.addEventListener('click', () => {
@@ -58,6 +62,12 @@ export class RouteEditor {
         if (deleteRouteBtn) {
             deleteRouteBtn.addEventListener('click', () => {
                 this.toggleActionButton('delete', deleteRouteBtn);
+            });
+        }
+
+        if (saveRouteBtn) {
+            saveRouteBtn.addEventListener('click', () => {
+                this.saveSelectedRoute();
             });
         }
 
@@ -795,6 +805,107 @@ export class RouteEditor {
                 margin-top: 10px;
                 border: none;
                 background-color: #ffc107;
+                color: white;
+                border-radius: 4px;
+                cursor: pointer;
+            ">OK</button>
+        `;
+        document.body.appendChild(messageBox);
+    }
+
+    // 選択されているルートを保存する機能
+    async saveSelectedRoute() {
+        const selectedRoute = this.getSelectedRoute();
+        if (!selectedRoute) {
+            this.showErrorMessage('エラー', 'ルートを選択してください。');
+            return;
+        }
+
+        try {
+            // 保存用データの準備
+            const saveData = this.prepareSaveData(selectedRoute);
+            
+            // ファイル名の生成（仕様に従う）
+            const filename = this.generateSaveFilename(selectedRoute);
+            
+            // ファイル保存の実行
+            await this.fileHandler.saveJSONWithUserChoice(saveData, filename);
+            
+            // 保存成功のメッセージ
+            this.showSuccessMessage('保存完了', `ルートデータが保存されました。\nファイル名: ${filename}`);
+            
+            // 編集状態をクリア
+            selectedRoute.isEdited = false;
+            this.updateRouteOptionValue(selectedRoute);
+            
+        } catch (error) {
+            this.showErrorMessage('保存エラー', error.message);
+        }
+    }
+
+    // 保存用データを準備（仕様に従って中間点のJSON形式で保存）
+    prepareSaveData(routeData) {
+        const wayPoint = routeData.wayPoint || routeData.wayPoints || routeData.points;
+        
+        if (!wayPoint || !Array.isArray(wayPoint)) {
+            throw new Error('保存可能なルートデータがありません。');
+        }
+
+        // 保存データの構築（読み込み時と同じ構造）
+        const saveData = {
+            imageReference: this.imageOverlay.currentImageFileName || '',
+            startPoint: routeData.startPoint || routeData.start || routeData.startPointId || (routeData.routeInfo && routeData.routeInfo.startPoint) || '',
+            endPoint: routeData.endPoint || routeData.end || routeData.endPointId || (routeData.routeInfo && routeData.routeInfo.endPoint) || '',
+            wayPointCount: wayPoint.length,
+            wayPoint: wayPoint.map(point => ({
+                imageX: point.imageX,
+                imageY: point.imageY
+            }))
+        };
+
+        // routeInfoがある場合は保持
+        if (routeData.routeInfo) {
+            saveData.routeInfo = { ...routeData.routeInfo };
+        }
+
+        return saveData;
+    }
+
+    // ファイル名の生成（仕様に従う）
+    generateSaveFilename(routeData) {
+        const imageFileName = this.imageOverlay.currentImageFileName || 'unknown';
+        const startPoint = routeData.startPoint || routeData.start || routeData.startPointId || (routeData.routeInfo && routeData.routeInfo.startPoint) || 'start';
+        const endPoint = routeData.endPoint || routeData.end || routeData.endPointId || (routeData.routeInfo && routeData.routeInfo.endPoint) || 'end';
+        
+        return `${imageFileName}_route_${startPoint}_to_${endPoint}.json`;
+    }
+
+    // 保存成功メッセージを表示
+    showSuccessMessage(title, message) {
+        const messageBox = document.createElement('div');
+        messageBox.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border: 2px solid #28a745;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 10000;
+            border-radius: 8px;
+            font-family: sans-serif;
+            text-align: center;
+            max-width: 400px;
+        `;
+        messageBox.innerHTML = `
+            <h3 style="color: #28a745; margin-top: 0;">${title}</h3>
+            <p style="white-space: pre-line; color: #333;">${message}</p>
+            <button onclick="this.parentNode.remove()" style="
+                padding: 8px 16px;
+                margin-top: 10px;
+                border: none;
+                background-color: #28a745;
                 color: white;
                 border-radius: 4px;
                 cursor: pointer;
