@@ -1037,9 +1037,19 @@ export class RouteEditor {
             // 既存の経路線をクリア
             this.clearRouteLines();
 
+            // 開始・終了ポイント名を取得
+            const startPointName = selectedRoute.startPoint || selectedRoute.start || selectedRoute.startPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.startPoint);
+            const endPointName = selectedRoute.endPoint || selectedRoute.end || selectedRoute.endPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.endPoint);
+            
+            console.log('経路線描画: 開始ポイント名:', startPointName);
+            console.log('経路線描画: 終了ポイント名:', endPointName);
+            
             // 開始・終了ポイントを取得
-            const startPoint = this.getGpsPointByName(selectedRoute.startPoint || selectedRoute.start || selectedRoute.startPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.startPoint));
-            const endPoint = this.getGpsPointByName(selectedRoute.endPoint || selectedRoute.end || selectedRoute.endPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.endPoint));
+            const startPoint = this.getGpsPointByName(startPointName);
+            const endPoint = this.getGpsPointByName(endPointName);
+            
+            console.log('経路線描画: 取得した開始ポイント:', startPoint);
+            console.log('経路線描画: 取得した終了ポイント:', endPoint);
 
             if (!startPoint) {
                 this.showErrorMessage('エラー', '開始ポイントが見つかりません。');
@@ -1093,11 +1103,28 @@ export class RouteEditor {
 
     // GPSポイントを名前で検索
     getGpsPointByName(pointName) {
-        if (!this.gpsData || !this.gpsData.gpsPoints || !pointName) {
+        if (!this.gpsData || !pointName) {
             return null;
         }
 
-        return this.gpsData.gpsPoints.find(point => point.id === pointName);
+        // GPSDataクラスのgetGPSMarkers()メソッドを使用してGPSポイントを取得
+        const gpsMarkers = this.gpsData.getGPSMarkers();
+        if (!gpsMarkers || gpsMarkers.length === 0) {
+            return null;
+        }
+
+        // pointName（ポイントID）で検索
+        const foundMarker = gpsMarkers.find(marker => marker.id === pointName);
+        if (foundMarker) {
+            return {
+                id: foundMarker.id,
+                latitude: foundMarker.lat,
+                longitude: foundMarker.lng,
+                data: foundMarker.data
+            };
+        }
+
+        return null;
     }
 
     // 経路線をクリア
