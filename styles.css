@@ -314,7 +314,7 @@
     cursor: pointer;
     text-align: center;
     transition: all 0.2s ease;
-    min-width: 40px;
+    min-width: 60px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -354,6 +354,11 @@
 }
 
 /* 個別ボタンの幅設定 */
+#saveRouteBtn {
+    flex: none;
+    width: 40px;
+}
+
 #segmentRouteBtn,
 #optimizeRouteBtn {
     flex: none;

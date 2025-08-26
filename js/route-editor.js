@@ -47,6 +47,9 @@ export class RouteEditor {
         const deleteRouteBtn = document.getElementById('deleteRouteBtn');
         const clearRouteBtn = document.getElementById('clearRouteBtn');
         const saveRouteBtn = document.getElementById('saveRouteBtn');
+        const segmentRouteBtn = document.getElementById('segmentRouteBtn');
+        const optimizeRouteBtn = document.getElementById('optimizeRouteBtn');
+        const saveGeoJsonRouteBtn = document.getElementById('saveGeoJsonRouteBtn');
 
         if (addRouteBtn) {
             addRouteBtn.addEventListener('click', () => {
@@ -68,13 +71,36 @@ export class RouteEditor {
 
         if (clearRouteBtn) {
             clearRouteBtn.addEventListener('click', () => {
+                this.clearActionButtonSelection();
                 this.clearSelectedRoute();
             });
         }
 
         if (saveRouteBtn) {
             saveRouteBtn.addEventListener('click', () => {
+                this.clearActionButtonSelection();
                 this.saveSelectedRoute();
+            });
+        }
+
+        if (segmentRouteBtn) {
+            segmentRouteBtn.addEventListener('click', () => {
+                this.clearActionButtonSelection();
+                // 経路線機能（未実装）
+            });
+        }
+
+        if (optimizeRouteBtn) {
+            optimizeRouteBtn.addEventListener('click', () => {
+                this.clearActionButtonSelection();
+                // 最適化機能（未実装）
+            });
+        }
+
+        if (saveGeoJsonRouteBtn) {
+            saveGeoJsonRouteBtn.addEventListener('click', () => {
+                this.clearActionButtonSelection();
+                // GeoJSON出力機能（未実装）
             });
         }
 
@@ -999,18 +1025,12 @@ export class RouteEditor {
     clearSelectedRoute() {
         const selectedRoute = this.getSelectedRoute();
         if (!selectedRoute) {
-            this.showErrorMessage('エラー', 'クリアするルートを選択してください。');
             return;
         }
 
-        // 確認ダイアログを表示
         const startPoint = selectedRoute.startPoint || selectedRoute.start || selectedRoute.startPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.startPoint) || 'unknown';
         const endPoint = selectedRoute.endPoint || selectedRoute.end || selectedRoute.endPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.endPoint) || 'unknown';
         
-        if (!confirm(`ルート「${startPoint} ～ ${endPoint}」を完全に削除しますか？\n\nこの操作は元に戻すことができません。`)) {
-            return;
-        }
-
         try {
             // 1. loadedRoutesから該当ルートを削除
             const routeIndex = this.loadedRoutes.findIndex(route => route === selectedRoute);
@@ -1048,9 +1068,6 @@ export class RouteEditor {
 
             // 4. 地図からマーカーをクリア（全てのルートを再描画）
             this.displayAllRoutes(null);
-
-            // 成功メッセージを表示
-            this.showSuccessMessage('削除完了', `ルート「${startPoint} ～ ${endPoint}」を削除しました。`);
             
         } catch (error) {
             this.showErrorMessage('削除エラー', `ルートの削除中にエラーが発生しました: ${error.message}`);
