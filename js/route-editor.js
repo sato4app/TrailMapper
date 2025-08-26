@@ -1222,6 +1222,9 @@ export class RouteEditor {
             // 地図を再描画
             this.displayAllRoutes(selectedRoute);
 
+            // 最適化後に経路線を自動的に引き直す
+            this.drawRouteSegments();
+
             // 結果メッセージを表示
             const improvement = Math.round(originalDistance - optimizedDistance);
             let message = `ルートを最適化しました。\n`;
