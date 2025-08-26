@@ -9,6 +9,7 @@ export class RouteEditor {
         this.routeData = [];
         this.loadedRoutes = [];
         this.waypointMarkers = [];
+        this.routeLines = [];
         this.selectedActionButton = null;
         this.fileHandler = new FileHandler();
         this.setupEventHandlers();
@@ -86,7 +87,7 @@ export class RouteEditor {
         if (segmentRouteBtn) {
             segmentRouteBtn.addEventListener('click', () => {
                 this.clearActionButtonSelection();
-                // 経路線機能（未実装）
+                this.drawRouteSegments();
             });
         }
 
@@ -807,6 +808,9 @@ export class RouteEditor {
         const routeSelect = document.getElementById('routeSelect');
         if (!routeSelect) return;
         
+        // 既存の経路線をクリア
+        this.clearRouteLines();
+        
         // getSelectedRouteメソッドを使用して一貫性のある選択方法を使う
         const selectedRoute = this.getSelectedRoute();
         
@@ -1021,6 +1025,91 @@ export class RouteEditor {
         document.body.appendChild(messageBox);
     }
 
+    // 経路線を描画する機能
+    drawRouteSegments() {
+        const selectedRoute = this.getSelectedRoute();
+        if (!selectedRoute) {
+            this.showErrorMessage('エラー', 'ルートを選択してください。');
+            return;
+        }
+
+        try {
+            // 既存の経路線をクリア
+            this.clearRouteLines();
+
+            // 開始・終了ポイントを取得
+            const startPoint = this.getGpsPointByName(selectedRoute.startPoint || selectedRoute.start || selectedRoute.startPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.startPoint));
+            const endPoint = this.getGpsPointByName(selectedRoute.endPoint || selectedRoute.end || selectedRoute.endPointId || (selectedRoute.routeInfo && selectedRoute.routeInfo.endPoint));
+
+            if (!startPoint) {
+                this.showErrorMessage('エラー', '開始ポイントが見つかりません。');
+                return;
+            }
+
+            if (!endPoint) {
+                this.showErrorMessage('エラー', '終了ポイントが見つかりません。');
+                return;
+            }
+
+            // 中間点を取得してindex順でソート
+            const wayPoints = selectedRoute.wayPoint || selectedRoute.wayPoints || selectedRoute.points || [];
+            const sortedWayPoints = [...wayPoints].sort((a, b) => (a.index || 0) - (b.index || 0));
+
+            // ルートポイントの座標配列を構築
+            const routeCoordinates = [];
+
+            // 開始ポイントを追加
+            routeCoordinates.push([startPoint.latitude, startPoint.longitude]);
+
+            // 中間点を追加
+            for (const waypoint of sortedWayPoints) {
+                const mapPosition = this.convertImageToMapCoordinates(waypoint.imageX, waypoint.imageY);
+                if (mapPosition) {
+                    routeCoordinates.push(mapPosition);
+                }
+            }
+
+            // 終了ポイントを追加
+            routeCoordinates.push([endPoint.latitude, endPoint.longitude]);
+
+            // 線を描画
+            if (routeCoordinates.length >= 2) {
+                const routeLine = L.polyline(routeCoordinates, {
+                    color: '#ff6b6b',
+                    weight: 2,
+                    opacity: 0.8,
+                    smoothFactor: 1,
+                    pane: 'routeLines'
+                });
+
+                routeLine.addTo(this.map);
+                this.routeLines.push(routeLine);
+            }
+
+        } catch (error) {
+            this.showErrorMessage('経路線描画エラー', `経路線の描画中にエラーが発生しました: ${error.message}`);
+        }
+    }
+
+    // GPSポイントを名前で検索
+    getGpsPointByName(pointName) {
+        if (!this.gpsData || !this.gpsData.gpsPoints || !pointName) {
+            return null;
+        }
+
+        return this.gpsData.gpsPoints.find(point => point.id === pointName);
+    }
+
+    // 経路線をクリア
+    clearRouteLines() {
+        this.routeLines.forEach(line => {
+            if (this.map.hasLayer(line)) {
+                this.map.removeLayer(line);
+            }
+        });
+        this.routeLines = [];
+    }
+
     // 選択されているルートをクリア（削除）する機能
     clearSelectedRoute() {
         const selectedRoute = this.getSelectedRoute();
@@ -1063,10 +1152,13 @@ export class RouteEditor {
                 }
             }
 
-            // 3. アクションボタンの選択状態をクリア
+            // 3. 経路線をクリア
+            this.clearRouteLines();
+
+            // 4. アクションボタンの選択状態をクリア
             this.clearActionButtonSelection();
 
-            // 4. 地図からマーカーをクリア（全てのルートを再描画）
+            // 5. 地図からマーカーをクリア（全てのルートを再描画）
             this.displayAllRoutes(null);
             
         } catch (error) {

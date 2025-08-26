@@ -57,6 +57,10 @@ export class MapCore {
         // wayPointマーカー用の専用ペインを作成
         this.map.createPane('waypointMarkers');
         this.map.getPane('waypointMarkers').style.zIndex = 750;
+
+        // 経路線用の専用ペインを作成
+        this.map.createPane('routeLines');
+        this.map.getPane('routeLines').style.zIndex = 600;
     }
 
     getMap() {
