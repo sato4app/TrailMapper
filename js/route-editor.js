@@ -132,11 +132,12 @@ export class RouteEditor {
                 }
             });
 
+            // ドロップダウンリストを更新（全ルートを追加）
             this.updateRouteSelector();
             
-            // 全てのルートを表示（新しく読み込んだルートを選択状態で）
-            const lastRoute = results[results.length - 1];
-            this.displayAllRoutes(lastRoute);
+            // ドロップダウンで実際に選択されているルートを取得して表示
+            const selectedRoute = this.getSelectedRoute();
+            this.displayAllRoutes(selectedRoute);
             
             return results;
         } catch (error) {
@@ -418,16 +419,26 @@ export class RouteEditor {
         if (!this.elements.routeSelect) return;
         
         const loadedRoutes = this.dataManager.getLoadedRoutes();
+        
+        // 全てのルートをドロップダウンに追加または更新
+        loadedRoutes.forEach(route => {
+            const optionValue = this.createRouteOptionValue(route);
+            const existingOption = this.findRouteOptionByRoute(route);
+            
+            if (existingOption) {
+                // 既存のオプションを更新（ウェイポイント数が変わっている可能性）
+                existingOption.value = optionValue;
+                existingOption.textContent = optionValue;
+            } else {
+                // 新しいオプションを追加
+                this.addRouteOption(optionValue);
+            }
+        });
+        
+        // 最後に読み込んだルートを選択
         const lastRoute = loadedRoutes[loadedRoutes.length - 1];
         if (lastRoute) {
             const optionValue = this.createRouteOptionValue(lastRoute);
-            
-            // 既存のオプションをチェック
-            if (!this.findRouteOption(optionValue)) {
-                this.addRouteOption(optionValue);
-            }
-            
-            // 最後に読み込んだルートを選択
             this.elements.routeSelect.value = optionValue;
             this.updateRouteDetails(lastRoute);
         }
@@ -446,6 +457,19 @@ export class RouteEditor {
     findRouteOption(optionValue) {
         for (let option of this.elements.routeSelect.options) {
             if (option.value === optionValue) {
+                return option;
+            }
+        }
+        return null;
+    }
+
+    // ルートベースでオプションを検索（同じstartPoint-endPointの組み合わせ）
+    findRouteOptionByRoute(routeData) {
+        const { startPoint, endPoint } = this.getRoutePoints(routeData);
+        const routePrefix = `${startPoint} ～ ${endPoint}（`;
+        
+        for (let option of this.elements.routeSelect.options) {
+            if (option.value.startsWith(routePrefix) && (option.value.endsWith('）') || option.value.endsWith('）*'))) {
                 return option;
             }
         }
