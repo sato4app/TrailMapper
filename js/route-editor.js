@@ -12,13 +12,49 @@ export class RouteEditor {
         this.routeLines = [];
         this.selectedActionButton = null;
         this.fileHandler = new FileHandler();
+        this.elements = this.getUIElements();
         this.setupEventHandlers();
     }
 
+    // UI要素を取得する共通メソッド
+    getUIElements() {
+        return {
+            loadRouteJsonBtn: document.getElementById('loadRouteJsonBtn'),
+            routeJsonInput: document.getElementById('routeJsonInput'),
+            routeSelect: document.getElementById('routeSelect'),
+            addRouteBtn: document.getElementById('addRouteBtn'),
+            moveRouteBtn: document.getElementById('moveRouteBtn'),
+            deleteRouteBtn: document.getElementById('deleteRouteBtn'),
+            clearRouteBtn: document.getElementById('clearRouteBtn'),
+            saveRouteBtn: document.getElementById('saveRouteBtn'),
+            segmentRouteBtn: document.getElementById('segmentRouteBtn'),
+            optimizeRouteBtn: document.getElementById('optimizeRouteBtn'),
+            saveGeoJsonRouteBtn: document.getElementById('saveGeoJsonRouteBtn')
+        };
+    }
+
+    // ルートデータからウェイポイント配列を取得する統一メソッド
+    getWaypoints(routeData) {
+        return routeData.wayPoint || routeData.wayPoints || routeData.points || [];
+    }
+
+    // ルートデータからスタート/エンドポイント名を取得する統一メソッド
+    getRoutePoints(routeData) {
+        return {
+            startPoint: routeData.startPoint || routeData.start || routeData.startPointId || (routeData.routeInfo && routeData.routeInfo.startPoint),
+            endPoint: routeData.endPoint || routeData.end || routeData.endPointId || (routeData.routeInfo && routeData.routeInfo.endPoint)
+        };
+    }
+
     setupEventHandlers() {
-        const loadRouteJsonBtn = document.getElementById('loadRouteJsonBtn');
-        const routeJsonInput = document.getElementById('routeJsonInput');
-        const routeSelect = document.getElementById('routeSelect');
+        this.setupFileHandlers();
+        this.setupRouteActionButtons();
+        this.setupMapEventHandlers();
+    }
+
+    // ファイル操作関連のイベントハンドラー設定
+    setupFileHandlers() {
+        const { loadRouteJsonBtn, routeJsonInput, routeSelect } = this.elements;
 
         if (loadRouteJsonBtn && routeJsonInput) {
             loadRouteJsonBtn.addEventListener('click', () => {
@@ -29,7 +65,7 @@ export class RouteEditor {
                 const files = e.target.files;
                 if (files && files.length > 0) {
                     this.loadMultipleRouteJSONs(files).catch(error => {
-                        this.showErrorMessage('ルートJSONファイルの読み込みに失敗しました', error.message);
+                        this.showMessage('error', 'ルートJSONファイルの読み込みに失敗しました', error.message);
                     });
                 }
             });
@@ -41,71 +77,44 @@ export class RouteEditor {
                 this.onRouteSelectionChange();
             });
         }
+    }
 
-        // ルート操作ボタンのイベントハンドラー
-        const addRouteBtn = document.getElementById('addRouteBtn');
-        const moveRouteBtn = document.getElementById('moveRouteBtn');
-        const deleteRouteBtn = document.getElementById('deleteRouteBtn');
-        const clearRouteBtn = document.getElementById('clearRouteBtn');
-        const saveRouteBtn = document.getElementById('saveRouteBtn');
-        const segmentRouteBtn = document.getElementById('segmentRouteBtn');
-        const optimizeRouteBtn = document.getElementById('optimizeRouteBtn');
-        const saveGeoJsonRouteBtn = document.getElementById('saveGeoJsonRouteBtn');
+    // ルート操作ボタンのイベントハンドラー設定
+    setupRouteActionButtons() {
+        const buttonActions = [
+            { element: this.elements.addRouteBtn, action: 'add' },
+            { element: this.elements.moveRouteBtn, action: 'move' },
+            { element: this.elements.deleteRouteBtn, action: 'delete' }
+        ];
 
-        if (addRouteBtn) {
-            addRouteBtn.addEventListener('click', () => {
-                this.toggleActionButton('add', addRouteBtn);
-            });
-        }
+        buttonActions.forEach(({ element, action }) => {
+            if (element) {
+                element.addEventListener('click', () => {
+                    this.toggleActionButton(action, element);
+                });
+            }
+        });
 
-        if (moveRouteBtn) {
-            moveRouteBtn.addEventListener('click', () => {
-                this.toggleActionButton('move', moveRouteBtn);
-            });
-        }
+        const directActions = [
+            { element: this.elements.clearRouteBtn, handler: () => this.clearSelectedRoute() },
+            { element: this.elements.saveRouteBtn, handler: () => this.saveSelectedRoute() },
+            { element: this.elements.segmentRouteBtn, handler: () => this.drawRouteSegments() },
+            { element: this.elements.optimizeRouteBtn, handler: () => this.optimizeRoute() },
+            { element: this.elements.saveGeoJsonRouteBtn, handler: () => {} } // GeoJSON出力機能（未実装）
+        ];
 
-        if (deleteRouteBtn) {
-            deleteRouteBtn.addEventListener('click', () => {
-                this.toggleActionButton('delete', deleteRouteBtn);
-            });
-        }
+        directActions.forEach(({ element, handler }) => {
+            if (element) {
+                element.addEventListener('click', () => {
+                    this.clearActionButtonSelection();
+                    handler();
+                });
+            }
+        });
+    }
 
-        if (clearRouteBtn) {
-            clearRouteBtn.addEventListener('click', () => {
-                this.clearActionButtonSelection();
-                this.clearSelectedRoute();
-            });
-        }
-
-        if (saveRouteBtn) {
-            saveRouteBtn.addEventListener('click', () => {
-                this.clearActionButtonSelection();
-                this.saveSelectedRoute();
-            });
-        }
-
-        if (segmentRouteBtn) {
-            segmentRouteBtn.addEventListener('click', () => {
-                this.clearActionButtonSelection();
-                this.drawRouteSegments();
-            });
-        }
-
-        if (optimizeRouteBtn) {
-            optimizeRouteBtn.addEventListener('click', () => {
-                this.clearActionButtonSelection();
-                this.optimizeRoute();
-            });
-        }
-
-        if (saveGeoJsonRouteBtn) {
-            saveGeoJsonRouteBtn.addEventListener('click', () => {
-                this.clearActionButtonSelection();
-                // GeoJSON出力機能（未実装）
-            });
-        }
-
-        // 地図クリックイベントハンドラー
+    // 地図イベントハンドラー設定
+    setupMapEventHandlers() {
         this.map.on('click', (e) => {
             this.onMapClick(e);
         });
@@ -135,10 +144,10 @@ export class RouteEditor {
                 try {
                     const routeData = JSON.parse(e.target.result);
                     
-                    // JSONファイル内容の検証
+                                // JSONファイル内容の検証
                     const validationResult = this.validateRouteJSON(routeData);
                     if (!validationResult.isValid) {
-                        this.showWarningMessage('ルートJSONファイル検証警告', validationResult.warnings.join('\n'));
+                        this.showMessage('warning', 'ルートJSONファイル検証警告', validationResult.warnings.join('\n'));
                     }
                     
                     // ルートデータを保存（type、indexが設定されていない場合は初期化）
@@ -192,9 +201,8 @@ export class RouteEditor {
             return;
         }
 
-        const routeSelect = document.getElementById('routeSelect');
-        if (!routeSelect || !routeSelect.value) {
-            this.showErrorMessage('エラー', 'ルートを選択してください。');
+        if (!this.elements.routeSelect || !this.elements.routeSelect.value) {
+            this.showMessage('error', 'エラー', 'ルートを選択してください。');
             return;
         }
         
@@ -223,12 +231,11 @@ export class RouteEditor {
         // 地図座標を画像座標に変換
         const imageCoords = this.convertMapToImageCoordinates(latlng.lat, latlng.lng);
         if (!imageCoords) {
-            this.showErrorMessage('エラー', '画像座標への変換に失敗しました。');
+            this.showMessage('error', 'エラー', '画像座標への変換に失敗しました。');
             return;
         }
 
-        // 新しいウェイポイントを作成（四捨五入して整数化、type、index追加）
-        const wayPoints = routeData.wayPoint || routeData.wayPoints || routeData.points || [];
+        const wayPoints = this.getWaypoints(routeData);
         const nextIndex = this.getNextWaypointIndex(routeData);
         
         const newWaypoint = {
@@ -245,9 +252,15 @@ export class RouteEditor {
             routeData.wayPoint = [newWaypoint];
         }
 
+        this.updateRouteDataAndDisplay(routeData);
+    }
+
+    // ルートデータ更新と表示更新の統一処理
+    updateRouteDataAndDisplay(routeData) {
         // wayPointCountを更新
         if (routeData.wayPointCount !== undefined) {
-            routeData.wayPointCount = (routeData.wayPoint || routeData.wayPoints || routeData.points).length;
+            const wayPoints = this.getWaypoints(routeData);
+            routeData.wayPointCount = wayPoints.length;
         }
 
         // ルートが編集されたことをマーク
@@ -260,9 +273,20 @@ export class RouteEditor {
         this.displayAllRoutes(routeData);
     }
 
+    // ルート内のウェイポイントを更新する統一メソッド
+    updateWaypointsInRoute(routeData, newWaypoints) {
+        if (routeData.wayPoint) {
+            routeData.wayPoint = newWaypoints;
+        } else if (routeData.wayPoints) {
+            routeData.wayPoints = newWaypoints;
+        } else if (routeData.points) {
+            routeData.points = newWaypoints;
+        }
+    }
+
     // 次のウェイポイントindexを取得
     getNextWaypointIndex(routeData) {
-        const wayPoints = routeData.wayPoint || routeData.wayPoints || routeData.points || [];
+        const wayPoints = this.getWaypoints(routeData);
         
         if (wayPoints.length === 0) {
             return 1; // 最初のウェイポイントはindex 1から開始
@@ -282,7 +306,7 @@ export class RouteEditor {
 
     // ウェイポイントデータを初期化（type、indexが設定されていない場合）
     initializeWaypointData(routeData) {
-        const wayPoints = routeData.wayPoint || routeData.wayPoints || routeData.points;
+        const wayPoints = this.getWaypoints(routeData);
         
         if (!wayPoints || !Array.isArray(wayPoints)) {
             return;
@@ -311,28 +335,35 @@ export class RouteEditor {
 
     // ウェイポイントを削除
     deleteWaypointFromRoute(latlng, routeData) {
-        const wayPoints = routeData.wayPoint || routeData.wayPoints || routeData.points;
+        const wayPoints = this.getWaypoints(routeData);
         if (!wayPoints || !Array.isArray(wayPoints)) {
             return;
         }
 
-        // クリックした位置から最も近いウェイポイントを探す
+        const closestIndex = this.findClosestWaypointIndex(latlng, wayPoints);
+        
+        if (closestIndex !== -1) {
+            wayPoints.splice(closestIndex, 1);
+            this.updateRouteDataAndDisplay(routeData);
+        } else {
+            console.log('削除対象のウェイポイントが見つかりませんでした');
+        }
+    }
+
+    // 最も近いウェイポイントのインデックスを取得
+    findClosestWaypointIndex(latlng, wayPoints) {
         let closestIndex = -1;
         let minDistance = Infinity;
-        const threshold = 100; // ピクセル単位の閾値を増やす
+        const threshold = 100; // ピクセル単位の閾値
 
         wayPoints.forEach((point, index) => {
             const mapPosition = this.convertImageToMapCoordinates(point.imageX, point.imageY);
             if (mapPosition) {
-                // 地図座標での距離を計算（メートル単位）
                 const mapDistance = latlng.distanceTo(mapPosition);
-                
-                // ピクセル距離も計算
                 const markerPixel = this.map.latLngToContainerPoint(mapPosition);
                 const clickPixel = this.map.latLngToContainerPoint(latlng);
                 const pixelDistance = markerPixel.distanceTo(clickPixel);
                 
-                // どちらかの条件を満たせば削除対象とする
                 if ((mapDistance < 50 || pixelDistance < threshold) && (mapDistance < minDistance || pixelDistance < minDistance)) {
                     minDistance = Math.min(mapDistance, pixelDistance);
                     closestIndex = index;
@@ -340,32 +371,12 @@ export class RouteEditor {
             }
         });
 
-        // 最も近いウェイポイントを削除
-        if (closestIndex !== -1) {
-            wayPoints.splice(closestIndex, 1);
-            
-            // wayPointCountを更新
-            if (routeData.wayPointCount !== undefined) {
-                routeData.wayPointCount = wayPoints.length;
-            }
-
-            // ルートが編集されたことをマーク
-            routeData.isEdited = true;
-
-            // ルートセレクターのオプション値を更新
-            this.updateRouteOptionValue(routeData);
-            
-            // 地図を再描画
-            this.displayAllRoutes(routeData);
-        } else {
-            // 削除対象が見つからなかった場合のメッセージ
-            console.log('削除対象のウェイポイントが見つかりませんでした');
-        }
+        return closestIndex;
     }
 
     // 指定されたウェイポイントを直接削除
     deleteSpecificWaypoint(targetPoint, routeData) {
-        const wayPoints = routeData.wayPoint || routeData.wayPoints || routeData.points;
+        const wayPoints = this.getWaypoints(routeData);
         if (!wayPoints || !Array.isArray(wayPoints)) {
             return;
         }
@@ -376,31 +387,33 @@ export class RouteEditor {
         );
 
         if (targetIndex !== -1) {
-            // ウェイポイントを削除
             wayPoints.splice(targetIndex, 1);
-            
-            // wayPointCountを更新
-            if (routeData.wayPointCount !== undefined) {
-                routeData.wayPointCount = wayPoints.length;
-            }
-
-            // ルートが編集されたことをマーク
-            routeData.isEdited = true;
-
-            // ルートセレクターのオプション値を更新
-            this.updateRouteOptionValue(routeData);
-            
-            // 地図を再描画
-            this.displayAllRoutes(routeData);
+            this.updateRouteDataAndDisplay(routeData);
         }
     }
 
     // GPSポイントに近いかどうかをチェック
     isNearGPSPoint(latlng) {
+        return this.checkGPSPointCollision(latlng, 5);
+    }
+
+    // 既存のポイントかどうかをチェック（指定されたルート以外をチェック）
+    isExistingPoint(latlng, excludeRoute = null) {
+        // GPSポイントとの重複をチェック
+        if (this.checkGPSPointCollision(latlng, 10)) {
+            return true;
+        }
+
+        // 他のルートのウェイポイントとの重複をチェック
+        return this.checkRoutePointCollision(latlng, excludeRoute, 3);
+    }
+
+    // GPS点との衝突チェック
+    checkGPSPointCollision(latlng, thresholdMeters) {
         if (this.gpsData && this.gpsData.gpsPoints) {
             for (const gpsPoint of this.gpsData.gpsPoints) {
                 const distance = latlng.distanceTo([gpsPoint.latitude, gpsPoint.longitude]);
-                if (distance < 5) { // 5メートル以内の場合は近すぎるとみなす
+                if (distance < thresholdMeters) {
                     return true;
                 }
             }
@@ -408,39 +421,26 @@ export class RouteEditor {
         return false;
     }
 
-    // 既存のポイントかどうかをチェック（指定されたルート以外をチェック）
-    isExistingPoint(latlng, excludeRoute = null) {
-        // GPSポイントとの重複をチェック
-        if (this.gpsData && this.gpsData.gpsPoints) {
-            for (const gpsPoint of this.gpsData.gpsPoints) {
-                const distance = latlng.distanceTo([gpsPoint.latitude, gpsPoint.longitude]);
-                if (distance < 10) { // 10メートル以内の場合は既存とみなす
-                    return true;
-                }
-            }
-        }
-
-        // 他のルートのウェイポイントとの重複をチェック（除外ルート以外）
+    // ルートポイントとの衝突チェック
+    checkRoutePointCollision(latlng, excludeRoute, thresholdMeters) {
         for (const route of this.loadedRoutes) {
-            // excludeRouteが指定されている場合はそのルートをスキップ
             if (excludeRoute && route === excludeRoute) {
                 continue;
             }
             
-            const wayPoints = route.wayPoint || route.wayPoints || route.points;
+            const wayPoints = this.getWaypoints(route);
             if (wayPoints && Array.isArray(wayPoints)) {
                 for (const point of wayPoints) {
                     const mapPosition = this.convertImageToMapCoordinates(point.imageX, point.imageY);
                     if (mapPosition) {
                         const distance = latlng.distanceTo(mapPosition);
-                        if (distance < 3) { // 3メートル未満の場合は既存とみなす
+                        if (distance < thresholdMeters) {
                             return true;
                         }
                     }
                 }
             }
         }
-
         return false;
     }
 
@@ -479,17 +479,14 @@ export class RouteEditor {
 
     // 選択されているルートを取得
     getSelectedRoute() {
-        const routeSelect = document.getElementById('routeSelect');
-        if (!routeSelect) {
+        if (!this.elements.routeSelect) {
             return null;
         }
 
-        const selectedValue = routeSelect.value;
+        const selectedValue = this.elements.routeSelect.value;
         
-        // より柔軟なマッチング：startPoint ～ endPointの部分で一致を判定
         return this.loadedRoutes.find(route => {
-            const startPoint = route.startPoint || route.start || route.startPointId || (route.routeInfo && route.routeInfo.startPoint);
-            const endPoint = route.endPoint || route.end || route.endPointId || (route.routeInfo && route.routeInfo.endPoint);
+            const { startPoint, endPoint } = this.getRoutePoints(route);
             const routePrefix = `${startPoint} ～ ${endPoint}（`;
             return selectedValue.startsWith(routePrefix);
         });
@@ -556,7 +553,7 @@ export class RouteEditor {
             if (oldPosition) {
                 e.target.setLatLng(oldPosition);
             }
-            this.showErrorMessage('エラー', '画像座標への変換に失敗しました。');
+            this.showMessage('error', 'エラー', '画像座標への変換に失敗しました。');
             return;
         }
 
@@ -564,11 +561,7 @@ export class RouteEditor {
         waypointData.imageX = Math.round(imageCoords.x);
         waypointData.imageY = Math.round(imageCoords.y);
 
-        // ルートが編集されたことをマーク
-        routeData.isEdited = true;
-
-        // ルートセレクターのオプション値を更新（ウェイポイント数が変わったため）
-        this.updateRouteOptionValue(routeData);
+        this.updateRouteDataAndDisplay(routeData);
     }
 
     addRouteToMap(routeData, isSelected = false) {
@@ -733,65 +726,68 @@ export class RouteEditor {
     
     // ルート選択用ドロップダウンリストの更新
     updateRouteSelector() {
-        const routeSelect = document.getElementById('routeSelect');
-        if (!routeSelect) return;
+        if (!this.elements.routeSelect) return;
         
-        // 最後に読み込んだルートを選択
         const lastRoute = this.loadedRoutes[this.loadedRoutes.length - 1];
         if (lastRoute) {
-            const startPoint = lastRoute.startPoint || lastRoute.start || lastRoute.startPointId || (lastRoute.routeInfo && lastRoute.routeInfo.startPoint);
-            const endPoint = lastRoute.endPoint || lastRoute.end || lastRoute.endPointId || (lastRoute.routeInfo && lastRoute.routeInfo.endPoint);
-            const wayPoint = lastRoute.wayPoint || lastRoute.wayPoints || lastRoute.points;
-            const waypointCount = wayPoint ? wayPoint.length : 0;
-            const optionValue = `${startPoint} ～ ${endPoint}（${waypointCount}）`;
+            const optionValue = this.createRouteOptionValue(lastRoute);
             
             // 既存のオプションをチェック
-            let optionExists = false;
-            for (let option of routeSelect.options) {
-                if (option.value === optionValue) {
-                    optionExists = true;
-                    break;
-                }
-            }
-            
-            // 新しいオプションを追加
-            if (!optionExists) {
-                const option = document.createElement('option');
-                option.value = optionValue;
-                option.textContent = optionValue;
-                routeSelect.appendChild(option);
+            if (!this.findRouteOption(optionValue)) {
+                this.addRouteOption(optionValue);
             }
             
             // 最後に読み込んだルートを選択
-            routeSelect.value = optionValue;
+            this.elements.routeSelect.value = optionValue;
             this.updateRouteDetails(lastRoute);
         }
     }
 
+    // ルートオプション値を作成
+    createRouteOptionValue(routeData, includeEditedMark = false) {
+        const { startPoint, endPoint } = this.getRoutePoints(routeData);
+        const wayPoints = this.getWaypoints(routeData);
+        const waypointCount = wayPoints ? wayPoints.length : 0;
+        const editedMark = includeEditedMark && routeData.isEdited ? '*' : '';
+        return `${startPoint} ～ ${endPoint}（${waypointCount}）${editedMark}`;
+    }
+
+    // ルートオプションを検索
+    findRouteOption(optionValue) {
+        for (let option of this.elements.routeSelect.options) {
+            if (option.value === optionValue) {
+                return option;
+            }
+        }
+        return null;
+    }
+
+    // ルートオプションを追加
+    addRouteOption(optionValue) {
+        const option = document.createElement('option');
+        option.value = optionValue;
+        option.textContent = optionValue;
+        this.elements.routeSelect.appendChild(option);
+    }
+
     // 特定のルートのオプション値を更新（選択状態を維持）
     updateRouteOptionValue(routeData) {
-        const routeSelect = document.getElementById('routeSelect');
-        if (!routeSelect) {
+        if (!this.elements.routeSelect) {
             return;
         }
 
-        const startPoint = routeData.startPoint || routeData.start || routeData.startPointId || (routeData.routeInfo && routeData.routeInfo.startPoint);
-        const endPoint = routeData.endPoint || routeData.end || routeData.endPointId || (routeData.routeInfo && routeData.routeInfo.endPoint);
-        const wayPoint = routeData.wayPoint || routeData.wayPoints || routeData.points;
-        const waypointCount = wayPoint ? wayPoint.length : 0;
-        const editedMark = routeData.isEdited ? '*' : '';
-        const newOptionValue = `${startPoint} ～ ${endPoint}（${waypointCount}）${editedMark}`;
+        const newOptionValue = this.createRouteOptionValue(routeData, true);
+        const { startPoint, endPoint } = this.getRoutePoints(routeData);
+        const routePrefix = `${startPoint} ～ ${endPoint}（`;
 
         // 現在選択されているオプションを見つけて更新
-        for (let i = 0; i < routeSelect.options.length; i++) {
-            const option = routeSelect.options[i];
+        for (let i = 0; i < this.elements.routeSelect.options.length; i++) {
+            const option = this.elements.routeSelect.options[i];
             
-            // 既存のオプションが同じルートを指している場合（waypointCountや"*"マークが異なる可能性がある）
-            const routePrefix = `${startPoint} ～ ${endPoint}（`;
             if (option.value.startsWith(routePrefix) && (option.value.endsWith('）') || option.value.endsWith('）*'))) {
                 option.value = newOptionValue;
                 option.textContent = newOptionValue;
-                routeSelect.value = newOptionValue;
+                this.elements.routeSelect.value = newOptionValue;
                 break;
             }
         }
@@ -838,7 +834,16 @@ export class RouteEditor {
         });
     }
     
-    showErrorMessage(title, message) {
+    // 統一されたメッセージ表示機能
+    showMessage(type, title, message) {
+        const colors = {
+            error: { border: '#dc3545', text: '#dc3545', background: '#dc3545' },
+            warning: { border: '#ffc107', text: '#ffc107', background: '#ffc107' },
+            success: { border: '#28a745', text: '#28a745', background: '#28a745' }
+        };
+
+        const color = colors[type] || colors.error;
+        
         const messageBox = document.createElement('div');
         messageBox.style.cssText = `
             position: fixed;
@@ -847,7 +852,7 @@ export class RouteEditor {
             transform: translate(-50%, -50%);
             background-color: white;
             padding: 20px;
-            border: 2px solid #dc3545;
+            border: 2px solid ${color.border};
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             z-index: 10000;
             border-radius: 8px;
@@ -856,46 +861,13 @@ export class RouteEditor {
             max-width: 400px;
         `;
         messageBox.innerHTML = `
-            <h3 style="color: #dc3545; margin-top: 0;">${title}</h3>
+            <h3 style="color: ${color.text}; margin-top: 0;">${title}</h3>
             <p style="white-space: pre-line; color: #333;">${message}</p>
             <button onclick="this.parentNode.remove()" style="
                 padding: 8px 16px;
                 margin-top: 10px;
                 border: none;
-                background-color: #dc3545;
-                color: white;
-                border-radius: 4px;
-                cursor: pointer;
-            ">OK</button>
-        `;
-        document.body.appendChild(messageBox);
-    }
-    
-    showWarningMessage(title, message) {
-        const messageBox = document.createElement('div');
-        messageBox.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: white;
-            padding: 20px;
-            border: 2px solid #ffc107;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 10000;
-            border-radius: 8px;
-            font-family: sans-serif;
-            text-align: center;
-            max-width: 400px;
-        `;
-        messageBox.innerHTML = `
-            <h3 style="color: #ffc107; margin-top: 0;">${title}</h3>
-            <p style="white-space: pre-line; color: #333;">${message}</p>
-            <button onclick="this.parentNode.remove()" style="
-                padding: 8px 16px;
-                margin-top: 10px;
-                border: none;
-                background-color: #ffc107;
+                background-color: ${color.background};
                 color: white;
                 border-radius: 4px;
                 cursor: pointer;
@@ -904,11 +876,24 @@ export class RouteEditor {
         document.body.appendChild(messageBox);
     }
 
+    // 後方互換性のためのラッパーメソッド
+    showErrorMessage(title, message) {
+        this.showMessage('error', title, message);
+    }
+    
+    showWarningMessage(title, message) {
+        this.showMessage('warning', title, message);
+    }
+    
+    showSuccessMessage(title, message) {
+        this.showMessage('success', title, message);
+    }
+
     // 選択されているルートを保存する機能
     async saveSelectedRoute() {
         const selectedRoute = this.getSelectedRoute();
         if (!selectedRoute) {
-            this.showErrorMessage('エラー', 'ルートを選択してください。');
+            this.showMessage('error', 'エラー', 'ルートを選択してください。');
             return;
         }
 
@@ -937,12 +922,12 @@ export class RouteEditor {
                     console.log('保存がキャンセルされました');
                 } else {
                     // 実際のエラーの場合
-                    this.showErrorMessage('保存エラー', result.error || '保存に失敗しました。');
+                    this.showMessage('error', '保存エラー', result.error || '保存に失敗しました。');
                 }
             }
             
         } catch (error) {
-            this.showErrorMessage('保存エラー', error.message);
+            this.showMessage('error', '保存エラー', error.message);
         }
     }
 
@@ -991,45 +976,12 @@ export class RouteEditor {
         return `${imageFileName}_route_${startPoint}_to_${endPoint}.json`;
     }
 
-    // 保存成功メッセージを表示
-    showSuccessMessage(title, message) {
-        const messageBox = document.createElement('div');
-        messageBox.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: white;
-            padding: 20px;
-            border: 2px solid #28a745;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 10000;
-            border-radius: 8px;
-            font-family: sans-serif;
-            text-align: center;
-            max-width: 400px;
-        `;
-        messageBox.innerHTML = `
-            <h3 style="color: #28a745; margin-top: 0;">${title}</h3>
-            <p style="white-space: pre-line; color: #333;">${message}</p>
-            <button onclick="this.parentNode.remove()" style="
-                padding: 8px 16px;
-                margin-top: 10px;
-                border: none;
-                background-color: #28a745;
-                color: white;
-                border-radius: 4px;
-                cursor: pointer;
-            ">OK</button>
-        `;
-        document.body.appendChild(messageBox);
-    }
 
     // 経路線を描画する機能
     drawRouteSegments() {
         const selectedRoute = this.getSelectedRoute();
         if (!selectedRoute) {
-            this.showErrorMessage('エラー', 'ルートを選択してください。');
+            this.showMessage('error', 'エラー', 'ルートを選択してください。');
             return;
         }
 
@@ -1046,12 +998,12 @@ export class RouteEditor {
             const endPoint = this.getGpsPointByName(endPointName);
 
             if (!startPoint) {
-                this.showErrorMessage('エラー', '開始ポイントが見つかりません。');
+                this.showMessage('error', 'エラー', '開始ポイントが見つかりません。');
                 return;
             }
 
             if (!endPoint) {
-                this.showErrorMessage('エラー', '終了ポイントが見つかりません。');
+                this.showMessage('error', 'エラー', '終了ポイントが見つかりません。');
                 return;
             }
 
@@ -1091,7 +1043,7 @@ export class RouteEditor {
             }
 
         } catch (error) {
-            this.showErrorMessage('経路線描画エラー', `経路線の描画中にエラーが発生しました: ${error.message}`);
+            this.showMessage('error', '経路線描画エラー', `経路線の描画中にエラーが発生しました: ${error.message}`);
         }
     }
 
@@ -1135,7 +1087,7 @@ export class RouteEditor {
     optimizeRoute() {
         const selectedRoute = this.getSelectedRoute();
         if (!selectedRoute) {
-            this.showErrorMessage('エラー', 'ルートを選択してください。');
+            this.showMessage('error', 'エラー', 'ルートを選択してください。');
             return;
         }
 
@@ -1148,14 +1100,14 @@ export class RouteEditor {
             const endPoint = this.getGpsPointByName(endPointName);
 
             if (!startPoint || !endPoint) {
-                this.showErrorMessage('エラー', '開始または終了ポイントが見つかりません。');
+                this.showMessage('error', 'エラー', '開始または終了ポイントが見つかりません。');
                 return;
             }
 
             // 中間点を取得
             const wayPoints = selectedRoute.wayPoint || selectedRoute.wayPoints || selectedRoute.points || [];
             if (wayPoints.length === 0) {
-                this.showErrorMessage('情報', '最適化する中間点がありません。');
+                this.showMessage('warning', '情報', '最適化する中間点がありません。');
                 return;
             }
 
@@ -1187,33 +1139,14 @@ export class RouteEditor {
             });
 
             // ルートデータを更新
-            if (selectedRoute.wayPoint) {
-                selectedRoute.wayPoint = optimizedOrder;
-            } else if (selectedRoute.wayPoints) {
-                selectedRoute.wayPoints = optimizedOrder;
-            } else if (selectedRoute.points) {
-                selectedRoute.points = optimizedOrder;
-            }
-
-            // wayPointCountを更新
-            if (selectedRoute.wayPointCount !== undefined) {
-                selectedRoute.wayPointCount = optimizedOrder.length;
-            }
-
-            // ルートが編集されたことをマーク
-            selectedRoute.isEdited = true;
-
-            // ルートセレクターのオプション値を更新
-            this.updateRouteOptionValue(selectedRoute);
-
-            // 地図を再描画
-            this.displayAllRoutes(selectedRoute);
+            this.updateWaypointsInRoute(selectedRoute, optimizedOrder);
+            this.updateRouteDataAndDisplay(selectedRoute);
 
             // 最適化後に経路線を自動的に引き直す
             this.drawRouteSegments();
 
         } catch (error) {
-            this.showErrorMessage('最適化エラー', `ルートの最適化中にエラーが発生しました: ${error.message}`);
+            this.showMessage('error', '最適化エラー', `ルートの最適化中にエラーが発生しました: ${error.message}`);
         }
     }
 
@@ -1342,7 +1275,7 @@ export class RouteEditor {
             this.displayAllRoutes(null);
             
         } catch (error) {
-            this.showErrorMessage('削除エラー', `ルートの削除中にエラーが発生しました: ${error.message}`);
+            this.showMessage('error', '削除エラー', `ルートの削除中にエラーが発生しました: ${error.message}`);
         }
     }
 }
