@@ -45,6 +45,27 @@ export class PointEditor {
             pointIdField.addEventListener('input', () => {
                 this.updateSelectedPointData();
             });
+            
+            // ID名フィールドのblurイベントで仮ナンバリング処理
+            pointIdField.addEventListener('blur', () => {
+                if (this.selectedPoint && pointIdField.value.trim() === '') {
+                    const tempId = `仮${this.tempCounter.toString().padStart(2, '0')}`;
+                    pointIdField.value = tempId;
+                    this.selectedPoint.pointId = tempId;
+                    this.tempCounter++;
+                    
+                    // ポップアップも更新
+                    if (this.selectedMarker) {
+                        const popupContent = `<div style="padding:1px 1px;text-align:center;min-width:18px;line-height:1;">${tempId}</div>`;
+                        this.selectedMarker.bindPopup(popupContent, {
+                            offset: [0, -12],
+                            closeButton: false,
+                            autoPan: false,
+                            className: 'gps-popup-minimal'
+                        });
+                    }
+                }
+            });
         }
         
         if (locationField) {
@@ -107,18 +128,9 @@ export class PointEditor {
     }
 
     addPoint(latlng) {
-        const pointIdField = document.getElementById('pointIdField');
-        let pointId = pointIdField ? pointIdField.value.trim() : '';
-        
-        // ID名がブランクの場合、"仮nn"として登録
-        if (!pointId) {
-            pointId = `仮${this.tempCounter.toString().padStart(2, '0')}`;
-            this.tempCounter++;
-        }
-
-        // 新しいポイントデータを作成
+        // 新しいポイントデータを作成（ID名は空のままにしておく）
         const pointData = {
-            pointId: pointId,
+            pointId: '',
             lat: latlng.lat,
             lng: latlng.lng,
             location: '',
@@ -134,7 +146,7 @@ export class PointEditor {
             // addGPSMarkersToMapは既存をクリアするので、手動でマーカーを作成
             const triangleIcon = L.divIcon({
                 className: 'gps-triangle-marker',
-                html: `<div style="width: 0; height: 0; border-left: 6.5px solid transparent; border-right: 6.5px solid transparent; border-top: 14px solid #ff0000; position: relative;"></div>`,
+                html: `<div style="width: 0; height: 0; border-left: 6.5px solid transparent; border-right: 6.5px solid transparent; border-top: 14px solid #32cd32; position: relative;"></div>`,
                 iconSize: [13, 14],
                 iconAnchor: [6.5, 14]
             });
@@ -143,8 +155,8 @@ export class PointEditor {
                 icon: triangleIcon
             }).addTo(this.map);
 
-            // ポップアップを設定
-            let popupContent = `<div style="padding:1px 1px;text-align:center;min-width:18px;line-height:1;">${pointData.pointId}</div>`;
+            // ポップアップを設定（ID名が空の場合は空のポップアップ）
+            let popupContent = `<div style="padding:1px 1px;text-align:center;min-width:18px;line-height:1;">${pointData.pointId || ''}</div>`;
             marker.bindPopup(popupContent, {
                 offset: [0, -12],
                 closeButton: false,
