@@ -46,7 +46,7 @@ export class PointEditor {
                 this.updateSelectedPointData();
             });
             
-            // ID名フィールドのblurイベントで仮ナンバリング処理
+            // ID名フィールドのblurイベントで仮ナンバリング処理（既存のポイントで空になった場合のみ）
             pointIdField.addEventListener('blur', () => {
                 if (this.selectedPoint && pointIdField.value.trim() === '') {
                     const tempId = `仮${this.tempCounter.toString().padStart(2, '0')}`;
@@ -134,9 +134,12 @@ export class PointEditor {
     }
 
     addPoint(latlng) {
-        // 新しいポイントデータを作成（ID名は空のままにしておく）
+        // 新しいポイントデータを作成（ID名は仮ナンバリングを設定）
+        const tempId = `仮${this.tempCounter.toString().padStart(2, '0')}`;
+        this.tempCounter++;
+        
         const pointData = {
-            pointId: '',
+            pointId: tempId,
             lat: latlng.lat,
             lng: latlng.lng,
             location: '',
@@ -161,8 +164,8 @@ export class PointEditor {
                 icon: triangleIcon
             }).addTo(this.map);
 
-            // ポップアップを設定（ID名が空の場合は空のポップアップ）
-            let popupContent = `<div style="padding:1px 1px;text-align:center;min-width:18px;line-height:1;">${pointData.pointId || ''}</div>`;
+            // ポップアップを設定
+            let popupContent = `<div style="padding:1px 1px;text-align:center;min-width:18px;line-height:1;">${pointData.pointId}</div>`;
             marker.bindPopup(popupContent, {
                 offset: [0, -12],
                 closeButton: false,
@@ -184,6 +187,15 @@ export class PointEditor {
         this.updatePointCountField();
         this.selectPoint(pointData);
 
+        // ID名フィールドのテキストを全選択
+        const pointIdField = document.getElementById('pointIdField');
+        if (pointIdField) {
+            setTimeout(() => {
+                pointIdField.focus();
+                pointIdField.select();
+            }, 100);
+        }
+
         // 追加モードを解除
         this.clearSelection();
     }
@@ -195,12 +207,50 @@ export class PointEditor {
             this.onMarkerClick(pointData, marker);
         });
 
-        // ドラッグイベント
+        // マウスホバーイベント（移動モード時のカーソル変更）
+        marker.off('mouseover').on('mouseover', () => {
+            if (this.selectedAction === 'move') {
+                marker.getElement().style.cursor = 'move';
+            }
+        });
+
+        marker.off('mouseout').on('mouseout', () => {
+            if (this.selectedAction === 'move') {
+                marker.getElement().style.cursor = 'move';
+            } else {
+                marker.getElement().style.cursor = 'pointer';
+            }
+        });
+
+        // ドラッグ開始イベント
+        marker.off('dragstart').on('dragstart', (e) => {
+            if (this.selectedAction === 'move') {
+                // マウスダウンでポイントのID名や場所を表示
+                this.selectPoint(pointData, marker);
+            }
+        });
+
+        // ドラッグ中イベント（座標情報をリアルタイム更新）
+        marker.off('drag').on('drag', (e) => {
+            if (this.selectedAction === 'move') {
+                const newLatLng = e.target.getLatLng();
+                pointData.lat = newLatLng.lat;
+                pointData.lng = newLatLng.lng;
+                this.updatePointInfo(pointData);
+            }
+        });
+
+        // ドラッグ終了イベント
         marker.off('dragend').on('dragend', (e) => {
             const newLatLng = e.target.getLatLng();
             pointData.lat = newLatLng.lat;
             pointData.lng = newLatLng.lng;
             this.updatePointInfo(pointData);
+            
+            // 移動モードの場合は移動ボタンの選択を解除
+            if (this.selectedAction === 'move') {
+                this.clearSelection();
+            }
         });
 
         // マーカーにポイントデータを関連付け
@@ -353,5 +403,14 @@ export class PointEditor {
         });
 
         this.updatePointCountField();
+    }
+
+    // 既存のマーカーにも新しいイベントハンドラーを適用するメソッド
+    refreshExistingMarkerEvents() {
+        if (!this.gpsData || !this.gpsData.gpsMarkers) return;
+
+        this.gpsData.gpsMarkers.forEach(item => {
+            this.setupMarkerEvents(item.marker, item.data);
+        });
     }
 }
