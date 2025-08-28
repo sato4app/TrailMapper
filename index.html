@@ -144,7 +144,7 @@
         
         .point-action-buttons {
             margin-top: 10px;
-            text-align: center;
+            text-align: left;
         }
     </style>
 </head>
@@ -196,13 +196,13 @@
                 <!-- 緯度 -->
                 <div class="info-field-row">
                     <label for="latDecimalField">緯度</label>
-                    <input type="text" id="latDecimalField" placeholder="10進数形式" maxlength="12" size="10">
+                    <input type="text" id="latDecimalField" readonly placeholder="10進数形式" maxlength="12" size="10">
                 </div>
                 
                 <!-- 経度 -->
                 <div class="info-field-row">
                     <label for="lngDecimalField">経度</label>
-                    <input type="text" id="lngDecimalField" placeholder="10進数形式" maxlength="13" size="11">
+                    <input type="text" id="lngDecimalField" readonly placeholder="10進数形式" maxlength="13" size="11">
                 </div>
                 
                 <!-- DMS -->
@@ -221,7 +221,7 @@
                 <!-- 場所 -->
                 <div class="info-field-row">
                     <label for="locationField">場所</label>
-                    <input type="text" id="locationField" placeholder="場所を表示" maxlength="20">
+                    <input type="text" id="locationField" readonly placeholder="場所を表示" maxlength="20">
                 </div>
                 
                 <!-- ポイント操作ボタン -->
