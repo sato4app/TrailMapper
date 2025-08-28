@@ -289,42 +289,13 @@ export class RouteEditor {
 
     // 統一されたメッセージ表示機能
     showMessage(type, title, message) {
-        const colors = {
-            error: { border: '#dc3545', text: '#dc3545', background: '#dc3545' },
-            warning: { border: '#ffc107', text: '#ffc107', background: '#ffc107' },
-            success: { border: '#28a745', text: '#28a745', background: '#28a745' }
-        };
-
-        const color = colors[type] || colors.error;
-        
         const messageBox = document.createElement('div');
-        messageBox.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: white;
-            padding: 20px;
-            border: 2px solid ${color.border};
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            z-index: 10000;
-            border-radius: 8px;
-            font-family: sans-serif;
-            text-align: center;
-            max-width: 400px;
-        `;
+        messageBox.className = `message-box ${type || 'error'}`;
+        
         messageBox.innerHTML = `
-            <h3 style="color: ${color.text}; margin-top: 0;">${title}</h3>
-            <p style="white-space: pre-line; color: #333;">${message}</p>
-            <button onclick="this.parentNode.remove()" style="
-                padding: 8px 16px;
-                margin-top: 10px;
-                border: none;
-                background-color: ${color.background};
-                color: white;
-                border-radius: 4px;
-                cursor: pointer;
-            ">OK</button>
+            <h3 class="${type || 'error'}">${title}</h3>
+            <p>${message}</p>
+            <button class="${type || 'error'}" onclick="this.parentNode.remove()">OK</button>
         `;
         document.body.appendChild(messageBox);
     }

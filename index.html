@@ -123,6 +123,29 @@
             padding: 4px 8px !important;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
         }
+        
+        /* ポイント操作ボタンのスタイル */
+        .point-action-btn {
+            border: 2px solid #28a745;
+            color: #28a745;
+            background-color: white;
+            padding: 6px 12px;
+            margin: 0 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .point-action-btn:hover {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .point-action-buttons {
+            margin-top: 10px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -199,6 +222,13 @@
                 <div class="info-field-row">
                     <label for="locationField">場所</label>
                     <input type="text" id="locationField" placeholder="場所を表示" maxlength="20">
+                </div>
+                
+                <!-- ポイント操作ボタン -->
+                <div class="point-action-buttons">
+                    <button id="addPointBtn" class="point-action-btn" type="button">追加</button>
+                    <button id="movePointBtn" class="point-action-btn" type="button">移動</button>
+                    <button id="deletePointBtn" class="point-action-btn" type="button">削除</button>
                 </div>
             </div>
         </div>
