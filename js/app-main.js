@@ -6,6 +6,7 @@ import { PointOverlay } from './point-overlay.js';
 import { RouteEditor } from './route-editor.js';
 import { ModeSwitcher } from './mode-switcher.js';
 import { PointInfoManager } from './point-info-manager.js';
+import { PointEditor } from './point-editor.js';
 
 class GSIMapApp {
     constructor() {
@@ -16,6 +17,7 @@ class GSIMapApp {
         this.routeEditor = null;
         this.modeSwitcher = null;
         this.pointInfoManager = null;
+        this.pointEditor = null;
     }
 
     async init() {
@@ -53,6 +55,11 @@ class GSIMapApp {
         
         this.routeEditor = new RouteEditor(this.mapCore.getMap(), this.imageOverlay, this.gpsData);
         
+        // ポイント編集機能を初期化
+        this.pointEditor = new PointEditor(this.mapCore.getMap(), this.gpsData);
+        
+        // 既存のGPSデータからポイントを読み込み
+        this.pointEditor.loadExistingPoints();
     }
 
     // MapCoreの初期化完了を待つヘルパーメソッド

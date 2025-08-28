@@ -135,9 +135,15 @@
             cursor: pointer;
             font-size: 12px;
             transition: all 0.2s ease;
+            width: 60px;
         }
         
         .point-action-btn:hover {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .point-action-btn.selected {
             background-color: #28a745;
             color: white;
         }
@@ -190,7 +196,7 @@
                 <!-- ID名 -->
                 <div class="info-field-row">
                     <label for="pointIdField">ID名</label>
-                    <input type="text" id="pointIdField" readonly maxlength="5">
+                    <input type="text" id="pointIdField" maxlength="5">
                 </div>
                 
                 <!-- 緯度 -->
@@ -221,7 +227,7 @@
                 <!-- 場所 -->
                 <div class="info-field-row">
                     <label for="locationField">場所</label>
-                    <input type="text" id="locationField" readonly placeholder="場所を表示" maxlength="20">
+                    <input type="text" id="locationField" placeholder="場所を表示" maxlength="20">
                 </div>
                 
                 <!-- ポイント操作ボタン -->
