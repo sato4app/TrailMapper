@@ -4,7 +4,6 @@ export class PointEditor {
         this.map = map;
         this.gpsData = gpsData;
         this.selectedAction = null;
-        this.pointMarkers = [];
         this.tempCounter = 1; // 仮ナンバリング用カウンター
         this.setupEventHandlers();
     }
@@ -119,71 +118,75 @@ export class PointEditor {
 
         // 新しいポイントデータを作成
         const pointData = {
-            id: pointId,
+            pointId: pointId,
             lat: latlng.lat,
             lng: latlng.lng,
             location: '',
             elevation: null
         };
 
-        // マーカーを作成
-        const marker = this.createPointMarker(pointData);
-        this.pointMarkers.push(marker);
-
-        // GPS データに追加
+        // GPSDataクラスを使用してマーカーを作成
         if (this.gpsData) {
-            this.gpsData.addPoint(pointData);
+            // 既存のマーカーをクリアせずに、新しいポイントだけを追加
+            const currentMarkers = [...this.gpsData.gpsMarkers];
+            const newGpsData = [pointData];
+            
+            // addGPSMarkersToMapは既存をクリアするので、手動でマーカーを作成
+            const triangleIcon = L.divIcon({
+                className: 'gps-triangle-marker',
+                html: `<div style="width: 0; height: 0; border-left: 6.5px solid transparent; border-right: 6.5px solid transparent; border-top: 14px solid #ff0000; position: relative;"></div>`,
+                iconSize: [13, 14],
+                iconAnchor: [6.5, 14]
+            });
+
+            const marker = L.marker([pointData.lat, pointData.lng], {
+                icon: triangleIcon
+            }).addTo(this.map);
+
+            // ポップアップを設定
+            let popupContent = `<div style="padding:1px 1px;text-align:center;min-width:18px;line-height:1;">${pointData.pointId}</div>`;
+            marker.bindPopup(popupContent, {
+                offset: [0, -12],
+                closeButton: false,
+                autoPan: false,
+                className: 'gps-popup-minimal'
+            });
+
+            // GPSDataの配列に追加
+            this.gpsData.gpsMarkers.push({
+                marker: marker,
+                data: pointData
+            });
+            
+            // マーカーにイベントリスナーを追加
+            this.setupMarkerEvents(marker, pointData);
         }
 
         // UI更新
         this.updatePointCountField();
-        this.selectPoint(pointData, marker);
+        this.selectPoint(pointData);
 
         // 追加モードを解除
         this.clearSelection();
     }
 
-    createPointMarker(pointData) {
-        // GPS三角形マーカーのアイコンを作成
-        const triangleIcon = L.divIcon({
-            className: 'gps-triangle-marker',
-            html: `<div style="
-                width: 0; 
-                height: 0; 
-                border-left: 8px solid transparent; 
-                border-right: 8px solid transparent; 
-                border-bottom: 16px solid #ff0000; 
-                filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
-            "></div>`,
-            iconSize: [16, 16],
-            iconAnchor: [8, 16],
-            popupAnchor: [0, -16]
-        });
-
-        const marker = L.marker([pointData.lat, pointData.lng], { icon: triangleIcon })
-            .addTo(this.map);
-
+    setupMarkerEvents(marker, pointData) {
         // マーカークリックイベント
-        marker.on('click', (e) => {
+        marker.off('click').on('click', (e) => {
             e.originalEvent.stopPropagation();
             this.onMarkerClick(pointData, marker);
         });
 
         // ドラッグイベント
-        marker.on('dragend', (e) => {
+        marker.off('dragend').on('dragend', (e) => {
             const newLatLng = e.target.getLatLng();
             pointData.lat = newLatLng.lat;
             pointData.lng = newLatLng.lng;
             this.updatePointInfo(pointData);
-            if (this.gpsData) {
-                this.gpsData.updatePoint(pointData);
-            }
         });
 
         // マーカーにポイントデータを関連付け
         marker.pointData = pointData;
-
-        return marker;
     }
 
     onMarkerClick(pointData, marker) {
@@ -194,22 +197,29 @@ export class PointEditor {
         }
     }
 
-    selectPoint(pointData, marker) {
+    selectPoint(pointData, marker = null) {
         this.selectedPoint = pointData;
         this.selectedMarker = marker;
         this.updatePointInfo(pointData);
     }
 
     deletePoint(pointData, marker) {
-        // マーカーを地図から削除
-        this.map.removeLayer(marker);
-        
-        // 配列から削除
-        this.pointMarkers = this.pointMarkers.filter(m => m !== marker);
-        
-        // GPS データから削除
+        // GPSDataから該当するマーカーを見つけて削除
         if (this.gpsData) {
-            this.gpsData.removePoint(pointData);
+            const markerIndex = this.gpsData.gpsMarkers.findIndex(
+                item => item.marker === marker || 
+                (item.data.pointId === pointData.pointId && 
+                 item.data.lat === pointData.lat && 
+                 item.data.lng === pointData.lng)
+            );
+            
+            if (markerIndex !== -1) {
+                // マーカーを地図から削除
+                this.map.removeLayer(this.gpsData.gpsMarkers[markerIndex].marker);
+                
+                // GPSDataの配列から削除
+                this.gpsData.gpsMarkers.splice(markerIndex, 1);
+            }
         }
         
         // UI更新
@@ -225,15 +235,23 @@ export class PointEditor {
     }
 
     updatePointsDraggable(draggable) {
-        this.pointMarkers.forEach(marker => {
-            if (draggable) {
-                marker.dragging.enable();
-                marker.getElement().style.cursor = 'move';
-            } else {
-                marker.dragging.disable();
-                marker.getElement().style.cursor = 'pointer';
-            }
-        });
+        // GPSDataのマーカーを対象とする
+        if (this.gpsData && this.gpsData.gpsMarkers) {
+            this.gpsData.gpsMarkers.forEach(item => {
+                const marker = item.marker;
+                if (draggable) {
+                    marker.dragging.enable();
+                    if (marker.getElement()) {
+                        marker.getElement().style.cursor = 'move';
+                    }
+                } else {
+                    marker.dragging.disable();
+                    if (marker.getElement()) {
+                        marker.getElement().style.cursor = 'pointer';
+                    }
+                }
+            });
+        }
     }
 
     updateSelectedPointData() {
@@ -243,16 +261,11 @@ export class PointEditor {
         const locationField = document.getElementById('locationField');
 
         if (pointIdField) {
-            this.selectedPoint.id = pointIdField.value;
+            this.selectedPoint.pointId = pointIdField.value;
         }
         
         if (locationField) {
             this.selectedPoint.location = locationField.value;
-        }
-
-        // GPS データも更新
-        if (this.gpsData) {
-            this.gpsData.updatePoint(this.selectedPoint);
         }
     }
 
@@ -264,7 +277,7 @@ export class PointEditor {
         const elevationField = document.getElementById('elevationField');
         const locationField = document.getElementById('locationField');
 
-        if (pointIdField) pointIdField.value = pointData.id || '';
+        if (pointIdField) pointIdField.value = pointData.pointId || '';
         if (latDecimalField) latDecimalField.value = pointData.lat ? pointData.lat.toFixed(8) : '';
         if (lngDecimalField) lngDecimalField.value = pointData.lng ? pointData.lng.toFixed(8) : '';
         if (dmsField) dmsField.value = this.convertToDMS(pointData.lat, pointData.lng);
@@ -284,8 +297,8 @@ export class PointEditor {
 
     updatePointCountField() {
         const pointCountField = document.getElementById('pointCountField');
-        if (pointCountField) {
-            pointCountField.value = this.pointMarkers.length.toString();
+        if (pointCountField && this.gpsData && this.gpsData.gpsMarkers) {
+            pointCountField.value = this.gpsData.gpsMarkers.length.toString();
         }
     }
 
@@ -314,11 +327,11 @@ export class PointEditor {
 
     // 既存のGPSデータからポイントを読み込む
     loadExistingPoints() {
-        if (!this.gpsData || !this.gpsData.data) return;
+        if (!this.gpsData || !this.gpsData.gpsMarkers) return;
 
-        this.gpsData.data.forEach(pointData => {
-            const marker = this.createPointMarker(pointData);
-            this.pointMarkers.push(marker);
+        // 既存のマーカーにイベントリスナーを追加
+        this.gpsData.gpsMarkers.forEach(item => {
+            this.setupMarkerEvents(item.marker, item.data);
         });
 
         this.updatePointCountField();
