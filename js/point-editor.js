@@ -54,15 +54,21 @@ export class PointEditor {
                     this.selectedPoint.pointId = tempId;
                     this.tempCounter++;
                     
-                    // ポップアップも更新
-                    if (this.selectedMarker) {
-                        const popupContent = `<div style="padding:1px 1px;text-align:center;min-width:18px;line-height:1;">${tempId}</div>`;
-                        this.selectedMarker.bindPopup(popupContent, {
-                            offset: [0, -12],
-                            closeButton: false,
-                            autoPan: false,
-                            className: 'gps-popup-minimal'
-                        });
+                    // GPSDataの該当するポイントデータも更新
+                    if (this.gpsData && this.gpsData.gpsMarkers) {
+                        const markerItem = this.gpsData.gpsMarkers.find(item => item.data === this.selectedPoint);
+                        if (markerItem) {
+                            markerItem.data.pointId = tempId;
+                            
+                            // ポップアップも更新
+                            const popupContent = `<div style="padding:1px 1px;text-align:center;min-width:18px;line-height:1;">${tempId}</div>`;
+                            markerItem.marker.bindPopup(popupContent, {
+                                offset: [0, -12],
+                                closeButton: false,
+                                autoPan: false,
+                                className: 'gps-popup-minimal'
+                            });
+                        }
                     }
                 }
             });
