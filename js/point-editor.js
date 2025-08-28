@@ -343,6 +343,7 @@ export class PointEditor {
         const lngDecimalField = document.getElementById('lngDecimalField');
         const dmsField = document.getElementById('dmsField');
         const elevationField = document.getElementById('elevationField');
+        const gpsElevationField = document.getElementById('gpsElevationField');
         const locationField = document.getElementById('locationField');
 
         if (pointIdField) pointIdField.value = pointData.pointId || '';
@@ -351,10 +352,15 @@ export class PointEditor {
         if (dmsField) dmsField.value = this.convertToDMS(pointData.lat, pointData.lng);
         if (elevationField) elevationField.value = pointData.elevation || '';
         if (locationField) locationField.value = pointData.location || '';
+
+        // GPS標高を取得・表示
+        if (pointData.lat && pointData.lng) {
+            this.fetchGpsElevation(pointData.lat, pointData.lng, gpsElevationField);
+        }
     }
 
     clearPointInfo() {
-        const fields = ['pointIdField', 'latDecimalField', 'lngDecimalField', 'dmsField', 'elevationField', 'locationField'];
+        const fields = ['pointIdField', 'latDecimalField', 'lngDecimalField', 'dmsField', 'elevationField', 'gpsElevationField', 'locationField'];
         fields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (field) field.value = '';
@@ -412,5 +418,26 @@ export class PointEditor {
         this.gpsData.gpsMarkers.forEach(item => {
             this.setupMarkerEvents(item.marker, item.data);
         });
+    }
+
+    // 地理院地図のGPS値から標高を取得する
+    async fetchGpsElevation(lat, lng, fieldElement) {
+        if (!fieldElement) return;
+        
+        try {
+            // 地理院地図の標高API
+            const response = await fetch(`https://cyberjapandata2.gsi.go.jp/general/dem/scripts/getelevation.php?lon=${lng}&lat=${lat}&outtype=JSON`);
+            const data = await response.json();
+            
+            if (data && data.elevation !== undefined && data.elevation !== null) {
+                const elevation = Math.round(data.elevation * 10) / 10; // 小数第1位まで
+                fieldElement.value = `（ ${elevation} m）`;
+            } else {
+                fieldElement.value = '（ 標高データなし ）';
+            }
+        } catch (error) {
+            fieldElement.value = '（ 取得エラー ）';
+            console.warn('標高取得エラー:', error);
+        }
     }
 }
