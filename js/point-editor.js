@@ -48,6 +48,16 @@ export class PointEditor {
                 this.updateSelectedPointData();
             });
             
+            // ID名フィールドでEnter/Tabキーが押されたら場所フィールドにフォーカス移動
+            pointIdField.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                    e.preventDefault();
+                    if (locationField) {
+                        locationField.focus();
+                    }
+                }
+            });
+            
             // ID名フィールドのblurイベントで仮ナンバリング処理とX-nn形式チェック・変換
             pointIdField.addEventListener('blur', () => {
                 const currentValue = pointIdField.value.trim();
