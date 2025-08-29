@@ -147,7 +147,7 @@ export class PointEditor {
                 mapContainer.style.cursor = 'crosshair';
                 break;
             case 'move':
-                mapContainer.style.cursor = 'pointer';
+                mapContainer.style.cursor = 'move';
                 this.updatePointsDraggable(true);
                 break;
             case 'delete':
@@ -251,13 +251,13 @@ export class PointEditor {
         // マウスホバーイベント（移動モード時のカーソル変更）
         marker.off('mouseover').on('mouseover', () => {
             if (this.selectedAction === 'move') {
-                marker.getElement().style.cursor = 'move';
+                marker.getElement().style.cursor = 'pointer';
             }
         });
 
         marker.off('mouseout').on('mouseout', () => {
             if (this.selectedAction === 'move') {
-                marker.getElement().style.cursor = 'move';
+                marker.getElement().style.cursor = 'pointer';
             } else {
                 marker.getElement().style.cursor = 'pointer';
             }
