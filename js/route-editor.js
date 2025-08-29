@@ -210,6 +210,9 @@ export class RouteEditor {
         this.dataManager.updateRouteData(routeData);
         this.updateRouteOptionValue(routeData);
         this.displayAllRoutes(routeData);
+        
+        // 中継点変更後に自動的に経路線を描画と最適化を実行
+        this.optimizeAndDrawRouteAutomatic(routeData);
     }
 
     // 選択されているルートを取得
@@ -353,6 +356,56 @@ export class RouteEditor {
             });
         } catch (error) {
             this.showMessage('error', '経路線描画エラー', error.message);
+        }
+    }
+
+    // 中継点変更時の自動経路線描画（エラー時は静かに処理）
+    drawRouteSegmentsAutomatic(routeData) {
+        if (!routeData) return;
+
+        try {
+            this.optimizer.drawRouteSegments(routeData, (imageX, imageY) => {
+                return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
+            });
+        } catch (error) {
+            // 自動描画ではエラーメッセージを表示せず、コンソールログのみ
+            console.warn('自動経路線描画エラー:', error.message);
+        }
+    }
+
+    // 中継点変更時の自動最適化＋経路線描画（エラー時は静かに処理）
+    optimizeAndDrawRouteAutomatic(routeData) {
+        if (!routeData) return;
+
+        try {
+            // まず最適化を実行（中間点が2つ以上ある場合のみ）
+            const waypoints = this.getWaypoints(routeData);
+            if (waypoints && waypoints.length >= 2) {
+                const optimizedOrder = this.optimizer.optimizeRoute(routeData, (imageX, imageY) => {
+                    return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
+                });
+                
+                // ルートデータを更新（最適化されたウェイポイント順序を適用）
+                this.dataManager.updateWaypointsInRoute(routeData, optimizedOrder);
+            }
+            
+            // 経路線を描画
+            this.optimizer.drawRouteSegments(routeData, (imageX, imageY) => {
+                return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
+            });
+            
+        } catch (error) {
+            // 自動処理ではエラーメッセージを表示せず、コンソールログのみ
+            console.warn('自動最適化・経路線描画エラー:', error.message);
+            
+            // 最適化が失敗した場合でも経路線だけは描画を試行
+            try {
+                this.optimizer.drawRouteSegments(routeData, (imageX, imageY) => {
+                    return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
+                });
+            } catch (drawError) {
+                console.warn('自動経路線描画エラー:', drawError.message);
+            }
         }
     }
 
