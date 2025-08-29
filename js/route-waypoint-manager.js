@@ -257,6 +257,28 @@ export class RouteWaypointManager {
         waypointData.imageY = Math.round(imageCoords.y);
 
         console.log('ドラッグ終了: 更新されたウェイポイントデータ:', waypointData);
+        
+        // ルートデータ内のウェイポイント配列も確実に更新
+        const waypoints = this.getWaypoints(routeData);
+        if (waypoints && Array.isArray(waypoints)) {
+            // 該当するウェイポイントを見つけて更新
+            const waypointIndex = waypoints.findIndex(wp => {
+                // indexまたは元の座標で特定
+                if (wp.index !== undefined && waypointData.index !== undefined) {
+                    return wp.index === waypointData.index;
+                }
+                // indexがない場合はtypeと元の座標で特定
+                return wp.type === waypointData.type;
+            });
+            
+            if (waypointIndex !== -1) {
+                waypoints[waypointIndex] = waypointData;
+                console.log('ルートデータ内のウェイポイント配列を更新:', waypointIndex, waypointData);
+            } else {
+                console.warn('該当するウェイポイントが見つかりませんでした');
+            }
+        }
+
         onUpdate(routeData);
     }
 

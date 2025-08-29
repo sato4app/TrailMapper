@@ -57,7 +57,9 @@ export class RouteOptimizer {
 
             // 中間点を追加
             for (const waypoint of sortedWayPoints) {
+                console.log('経路座標計算中のウェイポイント:', waypoint);
                 const mapPosition = convertImageToMapCoordinates(waypoint.imageX, waypoint.imageY);
+                console.log('変換された地図座標:', mapPosition);
                 if (mapPosition) {
                     routeCoordinates.push(mapPosition);
                 }
