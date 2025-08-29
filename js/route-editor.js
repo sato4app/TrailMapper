@@ -215,14 +215,37 @@ export class RouteEditor {
         this.optimizeAndDrawRouteAutomatic(routeData);
     }
 
-    // ドラッグ終了時専用のデータ更新処理（表示更新はしない）
-    updateRouteDataOnly(routeData) {
-        console.log('ドラッグ終了時のデータ更新開始:', routeData);
+    // ドラッグ中の経路線描画（最適化なし、一時的な表示更新）
+    updateRouteVisualizationDuringDrag(routeData, tempWaypointData) {
+        try {
+            // 一時的なルートデータを作成（元のデータは変更しない）
+            const tempRouteData = JSON.parse(JSON.stringify(routeData));
+            const waypoints = this.getWaypoints(tempRouteData);
+            
+            // indexまたはtypeで該当するウェイポイントを特定
+            const waypointIndex = waypoints.findIndex(wp => 
+                (wp.index !== undefined && tempWaypointData.index !== undefined && wp.index === tempWaypointData.index) ||
+                (wp.type === tempWaypointData.type && wp.imageX === tempWaypointData.imageX && wp.imageY === tempWaypointData.imageY)
+            );
+            
+            if (waypointIndex !== -1) {
+                waypoints[waypointIndex] = { ...tempWaypointData };
+                
+                // 経路線のみ再描画（最適化は行わない）
+                this.drawRouteSegmentsAutomatic(tempRouteData);
+            }
+        } catch (error) {
+            console.warn('ドラッグ中経路線描画エラー:', error.message);
+        }
+    }
+
+    // ドラッグ終了時専用のデータ更新処理（最適化付き）
+    updateRouteDataWithOptimization(routeData) {
         this.dataManager.updateRouteData(routeData);
         this.updateRouteOptionValue(routeData);
         
-        // ドラッグ終了時は最適化を行わず、経路線描画のみ実行
-        this.drawRouteSegmentsAutomatic(routeData);
+        // ドラッグ終了時は最適化＋経路線描画を実行
+        this.optimizeAndDrawRouteAutomatic(routeData);
     }
 
     // 選択されているルートを取得
@@ -266,9 +289,18 @@ export class RouteEditor {
     // マーカーのドラッグ可能状態を更新
     updateMarkerDraggableState() {
         const selectedRoute = this.getSelectedRoute();
-        this.waypointManager.updateMarkerDraggableState(selectedRoute, this.selectedActionButton, (routeData) => {
-            this.updateRouteDataOnly(routeData);
-        });
+        this.waypointManager.updateMarkerDraggableState(
+            selectedRoute, 
+            this.selectedActionButton,
+            // ドラッグ中のコールバック（経路線描画のみ）
+            (routeData, tempWaypointData) => {
+                this.updateRouteVisualizationDuringDrag(routeData, tempWaypointData);
+            },
+            // ドラッグ終了時のコールバック（データ更新＋最適化）
+            (routeData) => {
+                this.updateRouteDataWithOptimization(routeData);
+            }
+        );
     }
 
     // 全てのルートを表示（選択されたルートは大きいアイコン、その他は小さいアイコン）
@@ -373,18 +405,12 @@ export class RouteEditor {
 
     // 中継点変更時の自動経路線描画（エラー時は静かに処理）
     drawRouteSegmentsAutomatic(routeData) {
-        console.log('自動経路線描画開始:', routeData);
-        if (!routeData) {
-            console.log('ルートデータが存在しません');
-            return;
-        }
+        if (!routeData) return;
 
         try {
-            console.log('経路線描画実行中...');
             this.optimizer.drawRouteSegments(routeData, (imageX, imageY) => {
                 return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
             });
-            console.log('経路線描画完了');
         } catch (error) {
             // 自動描画ではエラーメッセージを表示せず、コンソールログのみ
             console.warn('自動経路線描画エラー:', error.message);

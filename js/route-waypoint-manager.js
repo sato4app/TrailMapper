@@ -334,7 +334,7 @@ export class RouteWaypointManager {
     }
 
     // マーカーのドラッグ可能状態を更新
-    updateMarkerDraggableState(selectedRoute, selectedActionButton, onDragEndCallback = null) {
+    updateMarkerDraggableState(selectedRoute, selectedActionButton, onDragCallback = null, onDragEndCallback = null) {
         this.waypointMarkers.forEach(marker => {
             if (marker.routeData === selectedRoute && selectedActionButton === 'move') {
                 // ドラッグを有効化
@@ -343,7 +343,25 @@ export class RouteWaypointManager {
                 }
                 
                 // ドラッグイベントを追加（重複追加を防ぐため一旦削除）
+                marker.off('drag');
                 marker.off('dragend');
+                
+                // ドラッグ中のイベント（経路線描画のみ）
+                marker.on('drag', (e) => {
+                    const newPosition = e.target.getLatLng();
+                    const imageCoords = this.convertMapToImageCoordinates(newPosition.lat, newPosition.lng);
+                    if (imageCoords && onDragCallback) {
+                        // 一時的にデータを更新（実際のルートデータは変更しない）
+                        const tempWaypointData = {
+                            ...marker.waypointData,
+                            imageX: Math.round(imageCoords.x),
+                            imageY: Math.round(imageCoords.y)
+                        };
+                        onDragCallback(marker.routeData, tempWaypointData);
+                    }
+                });
+                
+                // ドラッグ終了時のイベント（データ更新＋最適化）
                 marker.on('dragend', (e) => {
                     this.onWaypointDragEnd(e, marker.waypointData, marker.routeData, (routeData) => {
                         if (onDragEndCallback) {
@@ -356,6 +374,7 @@ export class RouteWaypointManager {
                 if (marker.dragging) {
                     marker.dragging.disable();
                 }
+                marker.off('drag');
                 marker.off('dragend');
             }
         });
