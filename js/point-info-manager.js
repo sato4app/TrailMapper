@@ -80,6 +80,13 @@ export class PointInfoManager {
         
         document.getElementById('elevationField').value = pointData.elevation || '';
         document.getElementById('locationField').value = pointData.location || '';
+        
+        // GPS標高を自動取得・表示
+        if (latDecimal && lngDecimal) {
+            this.fetchGpsElevation(latDecimal, lngDecimal);
+        } else {
+            document.getElementById('gpsElevationField').value = '';
+        }
     }
 
     // ポイント情報フィールドをクリア
@@ -131,6 +138,11 @@ export class PointInfoManager {
                 const lngValue = document.getElementById('lngDecimalField').value;
                 document.getElementById('dmsField').value = this.coordinatesToDMS(decimal, lngValue);
                 
+                // GPS標高を自動更新
+                if (lngValue && !isNaN(parseFloat(lngValue))) {
+                    this.fetchGpsElevation(decimal, parseFloat(lngValue));
+                }
+                
                 if (this.currentPoint) {
                     this.currentPoint.lat = decimal;
                 }
@@ -150,6 +162,11 @@ export class PointInfoManager {
                 // DMS統合形式を更新
                 const latValue = document.getElementById('latDecimalField').value;
                 document.getElementById('dmsField').value = this.coordinatesToDMS(latValue, decimal);
+                
+                // GPS標高を自動更新
+                if (latValue && !isNaN(parseFloat(latValue))) {
+                    this.fetchGpsElevation(parseFloat(latValue), decimal);
+                }
                 
                 if (this.currentPoint) {
                     this.currentPoint.lng = decimal;
@@ -203,5 +220,27 @@ export class PointInfoManager {
             elevation: document.getElementById('elevationField').value,
             location: document.getElementById('locationField').value
         };
+    }
+
+    // 地理院地図のAPIからGPS標高を取得
+    async fetchGpsElevation(lat, lng) {
+        const gpsElevationField = document.getElementById('gpsElevationField');
+        if (!gpsElevationField) return;
+        
+        try {
+            // 地理院地図の標高API
+            const response = await fetch(`https://cyberjapandata2.gsi.go.jp/general/dem/scripts/getelevation.php?lon=${lng}&lat=${lat}&outtype=JSON`);
+            const data = await response.json();
+            
+            if (data && data.elevation !== undefined && data.elevation !== null) {
+                const elevation = Math.round(data.elevation); // 四捨五入して整数部のみ
+                gpsElevationField.value = elevation.toString(); // 数値のみを表示
+            } else {
+                gpsElevationField.value = '';
+            }
+        } catch (error) {
+            gpsElevationField.value = '';
+            console.warn('GPS標高取得エラー:', error);
+        }
     }
 }

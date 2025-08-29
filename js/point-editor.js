@@ -354,8 +354,12 @@ export class PointEditor {
         if (locationField) locationField.value = pointData.location || '';
 
         // GPS標高を取得・表示
-        if (pointData.lat && pointData.lng) {
+        if (pointData.lat && pointData.lng && gpsElevationField) {
+            // 取得中表示
+            gpsElevationField.value = '';
             this.fetchGpsElevation(pointData.lat, pointData.lng, gpsElevationField);
+        } else if (gpsElevationField) {
+            gpsElevationField.value = '';
         }
     }
 
