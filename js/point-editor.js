@@ -302,6 +302,8 @@ export class PointEditor {
         if (this.selectedAction === 'delete') {
             this.deletePoint(pointData, marker);
         } else {
+            // ポップアップを表示
+            marker.openPopup();
             this.selectPoint(pointData, marker);
         }
     }
