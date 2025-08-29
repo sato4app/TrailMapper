@@ -127,7 +127,12 @@ class GSIMapApp {
                         }
                     }
                     
-                    this.gpsData.loadGPSData(file).catch(error => {
+                    this.gpsData.loadGPSData(file).then(() => {
+                        // GPS読み込み成功後、PointEditorのイベントハンドラーを更新
+                        if (this.pointEditor) {
+                            this.pointEditor.refreshExistingMarkerEvents();
+                        }
+                    }).catch(error => {
                         this.showErrorMessage('GPS データ読み込みエラー', error.message);
                     });
                 }
