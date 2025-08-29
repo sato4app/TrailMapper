@@ -256,7 +256,9 @@ export class RouteEditor {
     // マーカーのドラッグ可能状態を更新
     updateMarkerDraggableState() {
         const selectedRoute = this.getSelectedRoute();
-        this.waypointManager.updateMarkerDraggableState(selectedRoute, this.selectedActionButton);
+        this.waypointManager.updateMarkerDraggableState(selectedRoute, this.selectedActionButton, (routeData) => {
+            this.updateRouteDataAndDisplay(routeData);
+        });
     }
 
     // 全てのルートを表示（選択されたルートは大きいアイコン、その他は小さいアイコン）
