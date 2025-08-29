@@ -30,7 +30,7 @@ export class PointEditor {
 
         if (deletePointBtn) {
             deletePointBtn.addEventListener('click', () => {
-                this.toggleActionButton('delete', deletePointBtn);
+                this.onDeleteButtonClick(deletePointBtn);
             });
         }
 
@@ -226,7 +226,11 @@ export class PointEditor {
 
         // UI更新
         this.updatePointCountField();
-        this.selectPoint(pointData);
+        
+        // デバッグ: pointIdが正しく設定されているか確認
+        console.log('addPoint - pointData:', pointData);
+        
+        this.selectPoint(pointData, marker);
 
         // ID名フィールドのテキストを全選択
         const pointIdField = document.getElementById('pointIdField');
@@ -237,8 +241,11 @@ export class PointEditor {
             }, 100);
         }
 
-        // 追加モードを解除
-        this.clearSelection();
+        // 追加モードを解除（選択したポイント情報はクリアしない）
+        const allButtons = document.querySelectorAll('.point-action-btn');
+        allButtons.forEach(btn => btn.classList.remove('selected'));
+        this.selectedAction = null;
+        this.updateMapCursor();
     }
 
     setupMarkerEvents(marker, pointData) {
@@ -387,6 +394,8 @@ export class PointEditor {
     }
 
     updatePointInfo(pointData) {
+        console.log('updatePointInfo - pointData:', pointData);
+        
         const pointIdField = document.getElementById('pointIdField');
         const latDecimalField = document.getElementById('latDecimalField');
         const lngDecimalField = document.getElementById('lngDecimalField');
@@ -395,6 +404,8 @@ export class PointEditor {
         const gpsElevationField = document.getElementById('gpsElevationField');
         const locationField = document.getElementById('locationField');
 
+        console.log('pointIdField exists:', !!pointIdField, 'pointId value:', pointData.pointId);
+        
         if (pointIdField) pointIdField.value = pointData.pointId || '';
         if (latDecimalField) latDecimalField.value = pointData.lat ? pointData.lat.toFixed(8) : '';
         if (lngDecimalField) lngDecimalField.value = pointData.lng ? pointData.lng.toFixed(8) : '';
@@ -426,6 +437,16 @@ export class PointEditor {
         const pointCountField = document.getElementById('pointCountField');
         if (pointCountField && this.gpsData && this.gpsData.gpsMarkers) {
             pointCountField.value = this.gpsData.gpsMarkers.length.toString();
+        }
+    }
+
+    onDeleteButtonClick(deleteButton) {
+        // すでにポイントが選択されている場合は即座に削除
+        if (this.selectedPoint && this.selectedMarker) {
+            this.deletePoint(this.selectedPoint, this.selectedMarker);
+        } else {
+            // ポイントが選択されていない場合は削除モードに切り替え
+            this.toggleActionButton('delete', deleteButton);
         }
     }
 
