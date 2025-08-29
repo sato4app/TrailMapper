@@ -147,7 +147,7 @@ export class PointEditor {
                 mapContainer.style.cursor = 'crosshair';
                 break;
             case 'move':
-                mapContainer.style.cursor = 'move';
+                mapContainer.style.cursor = 'pointer';
                 this.updatePointsDraggable(true);
                 break;
             case 'delete':
@@ -266,7 +266,8 @@ export class PointEditor {
         // ドラッグ開始イベント
         marker.off('dragstart').on('dragstart', (e) => {
             if (this.selectedAction === 'move') {
-                // マウスダウンでポイントのID名や場所を表示
+                // マウスダウンでポイントのID名や場所を表示し、ポップアップも表示
+                marker.openPopup();
                 this.selectPoint(pointData, marker);
             }
         });
@@ -305,6 +306,11 @@ export class PointEditor {
             // ポップアップを表示
             marker.openPopup();
             this.selectPoint(pointData, marker);
+            
+            // 移動モードの場合はGPS情報も表示
+            if (this.selectedAction === 'move') {
+                this.updatePointInfo(pointData);
+            }
         }
     }
 
