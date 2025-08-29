@@ -217,6 +217,7 @@ export class RouteEditor {
 
     // ドラッグ終了時専用のデータ更新処理（表示更新はしない）
     updateRouteDataOnly(routeData) {
+        console.log('ドラッグ終了時のデータ更新開始:', routeData);
         this.dataManager.updateRouteData(routeData);
         this.updateRouteOptionValue(routeData);
         
@@ -372,12 +373,18 @@ export class RouteEditor {
 
     // 中継点変更時の自動経路線描画（エラー時は静かに処理）
     drawRouteSegmentsAutomatic(routeData) {
-        if (!routeData) return;
+        console.log('自動経路線描画開始:', routeData);
+        if (!routeData) {
+            console.log('ルートデータが存在しません');
+            return;
+        }
 
         try {
+            console.log('経路線描画実行中...');
             this.optimizer.drawRouteSegments(routeData, (imageX, imageY) => {
                 return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
             });
+            console.log('経路線描画完了');
         } catch (error) {
             // 自動描画ではエラーメッセージを表示せず、コンソールログのみ
             console.warn('自動経路線描画エラー:', error.message);

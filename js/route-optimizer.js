@@ -21,6 +21,7 @@ export class RouteOptimizer {
 
     // 経路線を描画する機能
     drawRouteSegments(selectedRoute, convertImageToMapCoordinates) {
+        console.log('RouteOptimizer.drawRouteSegments開始:', selectedRoute);
         if (!selectedRoute) {
             throw new Error('ルートを選択してください。');
         }
@@ -31,17 +32,19 @@ export class RouteOptimizer {
 
             // 開始・終了ポイント名を取得
             const { startPoint: startPointName, endPoint: endPointName } = this.getRoutePoints(selectedRoute);
+            console.log('開始・終了ポイント名:', startPointName, endPointName);
             
             // 開始・終了ポイントを取得
             const startPoint = this.getGpsPointByName(startPointName);
             const endPoint = this.getGpsPointByName(endPointName);
+            console.log('開始・終了ポイントデータ:', startPoint, endPoint);
 
             if (!startPoint) {
-                throw new Error('開始ポイントが見つかりません。');
+                throw new Error(`開始ポイント「${startPointName}」が見つかりません。`);
             }
 
             if (!endPoint) {
-                throw new Error('終了ポイントが見つかりません。');
+                throw new Error(`終了ポイント「${endPointName}」が見つかりません。`);
             }
 
             // 中間点を取得してindex順でソート
@@ -216,18 +219,23 @@ export class RouteOptimizer {
 
     // GPSポイントを名前で検索
     getGpsPointByName(pointName) {
+        console.log('GPSポイント検索開始:', pointName);
         if (!this.gpsData || !pointName) {
+            console.log('GPSデータまたはポイント名が存在しません');
             return null;
         }
 
         // GPSDataクラスのgetGPSMarkers()メソッドを使用してGPSポイントを取得
         const gpsMarkers = this.gpsData.getGPSMarkers();
+        console.log('利用可能なGPSマーカー数:', gpsMarkers?.length || 0);
         if (!gpsMarkers || gpsMarkers.length === 0) {
+            console.log('GPSマーカーが存在しません');
             return null;
         }
 
         // pointName（ポイントID）で検索
         const foundMarker = gpsMarkers.find(marker => marker.id === pointName);
+        console.log('検索結果:', foundMarker);
         if (foundMarker) {
             return {
                 id: foundMarker.id,
