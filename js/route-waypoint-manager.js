@@ -256,6 +256,7 @@ export class RouteWaypointManager {
         waypointData.imageX = Math.round(imageCoords.x);
         waypointData.imageY = Math.round(imageCoords.y);
 
+        console.log('ドラッグ終了: 更新されたウェイポイントデータ:', waypointData);
         onUpdate(routeData);
     }
 

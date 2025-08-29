@@ -150,6 +150,8 @@ export class RouteDataManager {
             routeData.wayPointCount = wayPoints.length;
         }
 
+        console.log('RouteDataManager.updateRouteData: ルートデータ更新完了', routeData);
+
         // ルートが編集されたことをマーク
         routeData.isEdited = true;
     }

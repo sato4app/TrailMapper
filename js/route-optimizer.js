@@ -46,6 +46,7 @@ export class RouteOptimizer {
 
             // 中間点を取得してindex順でソート
             const wayPoints = this.getWaypoints(selectedRoute);
+            console.log('経路線描画時のウェイポイント:', wayPoints);
             const sortedWayPoints = [...wayPoints].sort((a, b) => (a.index || 0) - (b.index || 0));
 
             // ルートポイントの座標配列を構築

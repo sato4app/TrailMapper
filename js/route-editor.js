@@ -244,8 +244,8 @@ export class RouteEditor {
         this.dataManager.updateRouteData(routeData);
         this.updateRouteOptionValue(routeData);
         
-        // ドラッグ終了時は最適化＋経路線描画を実行
-        this.optimizeAndDrawRouteAutomatic(routeData);
+        // ドラッグ終了時は経路線描画のみ（最適化は手動実行時のみ）
+        this.drawRouteSegmentsAutomatic(routeData);
     }
 
     // 選択されているルートを取得
