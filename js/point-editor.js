@@ -222,11 +222,13 @@ export class PointEditor {
             
             // マーカーにイベントリスナーを追加
             this.setupMarkerEvents(marker, pointData);
+            
+            // ポイントを選択状態にする
+            this.selectPoint(pointData, marker);
         }
 
         // UI更新
         this.updatePointCountField();
-        this.selectPoint(pointData, marker);
 
         // ID名フィールドのテキストを全選択
         const pointIdField = document.getElementById('pointIdField');
