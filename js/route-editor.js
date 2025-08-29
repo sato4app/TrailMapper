@@ -215,6 +215,15 @@ export class RouteEditor {
         this.optimizeAndDrawRouteAutomatic(routeData);
     }
 
+    // ドラッグ終了時専用のデータ更新処理（表示更新はしない）
+    updateRouteDataOnly(routeData) {
+        this.dataManager.updateRouteData(routeData);
+        this.updateRouteOptionValue(routeData);
+        
+        // ドラッグ終了時は最適化を行わず、経路線描画のみ実行
+        this.drawRouteSegmentsAutomatic(routeData);
+    }
+
     // 選択されているルートを取得
     getSelectedRoute() {
         if (!this.elements.routeSelect) {
@@ -257,7 +266,7 @@ export class RouteEditor {
     updateMarkerDraggableState() {
         const selectedRoute = this.getSelectedRoute();
         this.waypointManager.updateMarkerDraggableState(selectedRoute, this.selectedActionButton, (routeData) => {
-            this.updateRouteDataAndDisplay(routeData);
+            this.updateRouteDataOnly(routeData);
         });
     }
 
