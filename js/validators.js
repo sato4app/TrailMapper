@@ -22,45 +22,80 @@ export class Validators {
      * @returns {string} 修正された値
      */
     static formatPointId(value) {
-        if (!value || value.trim() === '') {
+        if (!value || typeof value !== 'string') {
             return value;
         }
         
-        let convertedValue = this.convertFullWidthToHalfWidth(value);
-        
-        // 完全な「X-nn」形式（2桁数字）の場合
-        const fullMatch = convertedValue.match(/^([A-Za-z])[-]?(\d{2})$/);
-        if (fullMatch) {
-            const letter = fullMatch[1].toUpperCase();
-            const numbers = fullMatch[2];
-            return `${letter}-${numbers}`;
+        const original = value.trim();
+        if (original === '') {
+            return value;
         }
         
-        // 不完全な入力「X-n」（1桁数字）の場合
-        const partialMatch = convertedValue.match(/^([A-Za-z])[-]?(\d{1})$/);
-        if (partialMatch) {
-            const letter = partialMatch[1].toUpperCase();
-            const number = partialMatch[2];
-            // 1桁の場合は0埋めしてフォーマット
-            return `${letter}-${number.padStart(2, '0')}`;
+        // 1. 全角文字を半角に変換（英文字は大文字化、「仮」も「カ」として処理）
+        let converted = this.convertFullWidthToHalfWidthForPointId(original);
+        
+        // 2. スペースを全角・半角とも削除
+        converted = converted.replace(/[\s　]/g, '');
+        
+        if (converted === '') {
+            return original;
         }
         
-        // ハイフンなしの「X数字」形式の場合
-        const noHyphenMatch = convertedValue.match(/^([A-Za-z])(\d{1,2})$/);
-        if (noHyphenMatch) {
-            const letter = noHyphenMatch[1].toUpperCase();
-            const numbers = noHyphenMatch[2].padStart(2, '0');
-            return `${letter}-${numbers}`;
+        // 3. 末尾が1桁の数字の場合、左をゼロで埋める
+        const singleDigitPattern = /^(.*)(\d)$/;
+        const singleDigitMatch = converted.match(singleDigitPattern);
+        
+        if (singleDigitMatch) {
+            const prefix = singleDigitMatch[1];
+            const digit = singleDigitMatch[2];
+            
+            // 末尾の1桁を2桁にパディング
+            const paddedNumber = digit.padStart(2, '0');
+            converted = `${prefix}${paddedNumber}`;
         }
         
-        // 数字のみの場合は変換しない
-        if (convertedValue.match(/^\d+$/)) {
-            return convertedValue;
+        // 4. 末尾が2桁以内の数字で、全体が3文字までの場合、数字の前に"-"を付ける
+        if (converted.length <= 3) {
+            const shortPattern = /^([A-Z]+)(\d{2})$/;
+            const shortMatch = converted.match(shortPattern);
+            
+            if (shortMatch) {
+                const letters = shortMatch[1];
+                const numbers = shortMatch[2];
+                return `${letters}-${numbers}`;
+            }
         }
         
-        return convertedValue;
+        return converted;
     }
     
+    /**
+     * ポイントID用の全角文字を半角に変換（英文字は大文字化）
+     * @param {string} str - 変換する文字列
+     * @returns {string} 変換後の文字列
+     */
+    static convertFullWidthToHalfWidthForPointId(str) {
+        return str.replace(/[Ａ-Ｚａ-ｚ０-９－−‐―仮]/g, function(char) {
+            if (char >= 'Ａ' && char <= 'Ｚ') {
+                return String.fromCharCode(char.charCodeAt(0) - 0xFEE0);
+            }
+            if (char >= 'ａ' && char <= 'ｚ') {
+                const halfWidthChar = String.fromCharCode(char.charCodeAt(0) - 0xFEE0);
+                return halfWidthChar.toUpperCase();
+            }
+            if (char >= '０' && char <= '９') {
+                return String.fromCharCode(char.charCodeAt(0) - 0xFEE0);
+            }
+            if (char === '－' || char === '−' || char === '‐' || char === '―') {
+                return '-';
+            }
+            return char;
+        }).replace(/[a-z]/g, function(char) {
+            // 半角小文字も大文字に変換
+            return char.toUpperCase();
+        });
+    }
+
     /**
      * 全角英文字と全角数字、全角ハイフンを半角に変換する
      * @param {string} str - 変換する文字列

@@ -1,4 +1,6 @@
 // ポイント編集機能を管理するモジュール
+import { Validators } from './validators.js';
+
 export class PointEditor {
     constructor(map, gpsData) {
         this.map = map;
@@ -74,29 +76,27 @@ export class PointEditor {
                         }
                     }
                 } else if (currentValue !== '') {
-                    // X-nn形式のチェック・変換（「仮」で始まるものは除外）
-                    if (!currentValue.startsWith('仮')) {
-                        const convertedValue = this.convertToXnnFormat(currentValue);
-                        if (convertedValue !== currentValue) {
-                            pointIdField.value = convertedValue;
-                            if (this.selectedPoint) {
-                                this.selectedPoint.pointId = convertedValue;
-                                
-                                // GPSDataの該当するポイントデータも更新
-                                if (this.gpsData && this.gpsData.gpsMarkers) {
-                                    const markerItem = this.gpsData.gpsMarkers.find(item => item.data === this.selectedPoint);
-                                    if (markerItem) {
-                                        markerItem.data.pointId = convertedValue;
-                                        
-                                        // ポップアップも更新
-                                        const popupContent = `<div style="padding:1px 1px;text-align:center;min-width:18px;line-height:1;">${convertedValue}</div>`;
-                                        markerItem.marker.bindPopup(popupContent, {
-                                            offset: [0, -12],
-                                            closeButton: false,
-                                            autoPan: false,
-                                            className: 'gps-popup-minimal'
-                                        });
-                                    }
+                    // X-nn形式のチェック・変換
+                    const convertedValue = Validators.formatPointId(currentValue);
+                    if (convertedValue !== currentValue) {
+                        pointIdField.value = convertedValue;
+                        if (this.selectedPoint) {
+                            this.selectedPoint.pointId = convertedValue;
+                            
+                            // GPSDataの該当するポイントデータも更新
+                            if (this.gpsData && this.gpsData.gpsMarkers) {
+                                const markerItem = this.gpsData.gpsMarkers.find(item => item.data === this.selectedPoint);
+                                if (markerItem) {
+                                    markerItem.data.pointId = convertedValue;
+                                    
+                                    // ポップアップも更新
+                                    const popupContent = `<div style="padding:1px 1px;text-align:center;min-width:18px;line-height:1;">${convertedValue}</div>`;
+                                    markerItem.marker.bindPopup(popupContent, {
+                                        offset: [0, -12],
+                                        closeButton: false,
+                                        autoPan: false,
+                                        className: 'gps-popup-minimal'
+                                    });
                                 }
                             }
                         }
@@ -476,49 +476,4 @@ export class PointEditor {
         }
     }
 
-    // X-nn形式への変換メソッド
-    convertToXnnFormat(input) {
-        if (!input || typeof input !== 'string') {
-            return input;
-        }
-        
-        const trimmed = input.trim();
-        if (trimmed === '') {
-            return input;
-        }
-        
-        // X-nn形式の正規表現パターン（X は英数字、nn は数字）
-        const xnnPattern = /^([A-Za-z0-9]+)-(\d+)$/;
-        const match = trimmed.match(xnnPattern);
-        
-        if (match) {
-            const prefix = match[1];
-            const number = match[2];
-            
-            // 既に2桁の場合はそのまま返す
-            if (number.length >= 2) {
-                return trimmed;
-            }
-            
-            // 2桁になるように0埋め
-            const paddedNumber = number.padStart(2, '0');
-            return `${prefix}-${paddedNumber}`;
-        }
-        
-        // X-nn形式でない場合は、X-数字の形式かチェック
-        const simplePattern = /^([A-Za-z0-9]+)(\d+)$/;
-        const simpleMatch = trimmed.match(simplePattern);
-        
-        if (simpleMatch) {
-            const prefix = simpleMatch[1];
-            const number = simpleMatch[2];
-            
-            // X-nn形式に変換（数字部分を2桁に0埋め）
-            const paddedNumber = number.padStart(2, '0');
-            return `${prefix}-${paddedNumber}`;
-        }
-        
-        // その他の場合はそのまま返す
-        return trimmed;
-    }
 }
