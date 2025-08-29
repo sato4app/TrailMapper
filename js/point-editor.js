@@ -226,10 +226,6 @@ export class PointEditor {
 
         // UI更新
         this.updatePointCountField();
-        
-        // デバッグ: pointIdが正しく設定されているか確認
-        console.log('addPoint - pointData:', pointData);
-        
         this.selectPoint(pointData, marker);
 
         // ID名フィールドのテキストを全選択
@@ -394,8 +390,6 @@ export class PointEditor {
     }
 
     updatePointInfo(pointData) {
-        console.log('updatePointInfo - pointData:', pointData);
-        
         const pointIdField = document.getElementById('pointIdField');
         const latDecimalField = document.getElementById('latDecimalField');
         const lngDecimalField = document.getElementById('lngDecimalField');
@@ -404,8 +398,6 @@ export class PointEditor {
         const gpsElevationField = document.getElementById('gpsElevationField');
         const locationField = document.getElementById('locationField');
 
-        console.log('pointIdField exists:', !!pointIdField, 'pointId value:', pointData.pointId);
-        
         if (pointIdField) pointIdField.value = pointData.pointId || '';
         if (latDecimalField) latDecimalField.value = pointData.lat ? pointData.lat.toFixed(8) : '';
         if (lngDecimalField) lngDecimalField.value = pointData.lng ? pointData.lng.toFixed(8) : '';
