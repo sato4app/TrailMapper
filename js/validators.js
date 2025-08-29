@@ -41,12 +41,14 @@ export class Validators {
             return original;
         }
         
-        // 3. 末尾が1桁の数字の場合、左をゼロで埋める（例："1"→"01"）
+        // 3. 末尾が1桁の数字の場合のみ、左をゼロで埋める（例："1"→"01"）
+        // 最後の2文字が数字の場合は0パディングしない
+        const lastTwoDigitsPattern = /\d{2}$/;
         const singleDigitEndPattern = /^(.*)(\d)$/;
         const singleDigitEndMatch = converted.match(singleDigitEndPattern);
         
-        if (singleDigitEndMatch && !singleDigitEndMatch[1].endsWith('-')) {
-            // ハイフンの直後でない場合のみパディング
+        if (singleDigitEndMatch && !singleDigitEndMatch[1].endsWith('-') && !lastTwoDigitsPattern.test(converted)) {
+            // ハイフンの直後でなく、最後の2文字が数字でない場合のみパディング
             const prefix = singleDigitEndMatch[1];
             const digit = singleDigitEndMatch[2];
             converted = `${prefix}${digit.padStart(2, '0')}`;
