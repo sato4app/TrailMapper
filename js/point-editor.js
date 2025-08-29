@@ -430,13 +430,13 @@ export class PointEditor {
             const data = await response.json();
             
             if (data && data.elevation !== undefined && data.elevation !== null) {
-                const elevation = Math.round(data.elevation * 10) / 10; // 小数第1位まで
-                fieldElement.value = `（ ${elevation} m）`;
+                const elevation = Math.round(data.elevation); // 四捨五入して整数部のみ
+                fieldElement.value = elevation.toString(); // 数値のみを表示
             } else {
-                fieldElement.value = '（ 標高データなし ）';
+                fieldElement.value = '';
             }
         } catch (error) {
-            fieldElement.value = '（ 取得エラー ）';
+            fieldElement.value = '';
             console.warn('標高取得エラー:', error);
         }
     }
