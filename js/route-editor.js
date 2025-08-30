@@ -309,9 +309,38 @@ export class RouteEditor {
             this.selectedActionButton,
             // ドラッグ終了時のコールバック（移動時の更新マーク付与）
             (routeData) => {
-                this.updateRouteDataAndDisplay(routeData, true); // 表示更新をスキップ
+                this.handleDragEnd(routeData);
             }
         );
+    }
+
+    // ドラッグ終了時の処理（マーカー再作成を避けて経路線のみ更新）
+    handleDragEnd(routeData) {
+        // データ更新と更新マーク付与
+        this.dataManager.updateRouteData(routeData);
+        this.updateRouteOptionValue(routeData);
+        
+        // 自動最適化を実行（中間点が2つ以上ある場合）
+        const waypoints = this.getWaypoints(routeData);
+        if (waypoints && waypoints.length >= 2) {
+            try {
+                this.performRouteOptimization(routeData, false, false); // メッセージなし、表示更新なし
+            } catch (error) {
+                console.warn('自動最適化エラー:', error.message);
+            }
+        }
+        
+        // 経路線を再描画（マーカーは再作成しない）
+        const allLoadedRoutes = this.dataManager.getLoadedRoutes();
+        if (allLoadedRoutes.length > 0) {
+            try {
+                this.optimizer.drawMultipleRouteSegments(allLoadedRoutes, (imageX, imageY) => {
+                    return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
+                });
+            } catch (error) {
+                console.warn('ドラッグ終了後の経路線再描画エラー:', error.message);
+            }
+        }
     }
 
     // 全てのルートを表示（選択されたルートは大きいアイコン、その他は小さいアイコン）
