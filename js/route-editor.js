@@ -233,6 +233,18 @@ export class RouteEditor {
         this.dataManager.updateRouteData(routeData);
         this.updateRouteOptionValue(routeData);
         this.displayAllRoutes(routeData);
+        
+        // 全ルートの経路線を再描画（移動後の経路線更新）
+        const allLoadedRoutes = this.dataManager.getLoadedRoutes();
+        if (allLoadedRoutes.length > 0) {
+            try {
+                this.optimizer.drawMultipleRouteSegments(allLoadedRoutes, (imageX, imageY) => {
+                    return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
+                });
+            } catch (error) {
+                console.warn('ドラッグ終了後の経路線再描画エラー:', error.message);
+            }
+        }
     }
 
     // 選択されているルートを取得
