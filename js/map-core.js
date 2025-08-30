@@ -9,35 +9,59 @@ export class MapCore {
         this.init();
     }
 
-    async init() {
-        
-        // 地図の初期化
-        this.map = L.map('map').setView(this.initialCenter, this.initialZoom);
+    init() {
+        // DOMが読み込まれるまで待機
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.initializeMap();
+            });
+        } else {
+            // すでに読み込み済みの場合は即座に初期化
+            this.initializeMap();
+        }
+    }
+    
+    initializeMap() {
+        try {
+            // 地図コンテナが存在するかチェック
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) {
+                console.error('地図コンテナ(#map)が見つかりません');
+                this.showErrorMessage('地図初期化エラー', '地図コンテナが見つかりません。');
+                return;
+            }
 
-        // スケールバーを右下に追加
-        L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 150 }).addTo(this.map);
+            // 地図の初期化
+            this.map = L.map('map').setView(this.initialCenter, this.initialZoom);
 
-        // 国土地理院タイルレイヤー
-        L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
-            attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>",
-            minZoom: 2, maxZoom: 18
-        }).addTo(this.map);
+            // スケールバーを右下に追加
+            L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 150 }).addTo(this.map);
 
-        // ドラッグハンドル用の専用ペインを作成
-        this.map.createPane('dragHandles');
-        this.map.getPane('dragHandles').style.zIndex = 650;
+            // 国土地理院タイルレイヤー
+            L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+                attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>",
+                minZoom: 2, maxZoom: 18
+            }).addTo(this.map);
 
-        // 中心マーカー用の専用ペインを作成
-        this.map.createPane('centerMarker');
-        this.map.getPane('centerMarker').style.zIndex = 700;
+            // ドラッグハンドル用の専用ペインを作成
+            this.map.createPane('dragHandles');
+            this.map.getPane('dragHandles').style.zIndex = 650;
 
-        // wayPointマーカー用の専用ペインを作成
-        this.map.createPane('waypointMarkers');
-        this.map.getPane('waypointMarkers').style.zIndex = 750;
+            // 中心マーカー用の専用ペインを作成
+            this.map.createPane('centerMarker');
+            this.map.getPane('centerMarker').style.zIndex = 700;
 
-        // 経路線用の専用ペインを作成
-        this.map.createPane('routeLines');
-        this.map.getPane('routeLines').style.zIndex = 600;
+            // wayPointマーカー用の専用ペインを作成
+            this.map.createPane('waypointMarkers');
+            this.map.getPane('waypointMarkers').style.zIndex = 750;
+
+            // 経路線用の専用ペインを作成
+            this.map.createPane('routeLines');
+            this.map.getPane('routeLines').style.zIndex = 600;
+        } catch (error) {
+            console.error('地図の初期化に失敗しました:', error);
+            this.showErrorMessage('地図初期化エラー', '地図の初期化に失敗しました。ページを再読み込みしてください。');
+        }
     }
 
     getMap() {
