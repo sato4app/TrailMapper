@@ -320,15 +320,8 @@ export class RouteEditor {
         this.dataManager.updateRouteData(routeData);
         this.updateRouteOptionValue(routeData);
         
-        // 自動最適化を実行（中間点が2つ以上ある場合）
-        const waypoints = this.getWaypoints(routeData);
-        if (waypoints && waypoints.length >= 2) {
-            try {
-                this.performRouteOptimization(routeData, false, false); // メッセージなし、表示更新なし
-            } catch (error) {
-                console.warn('自動最適化エラー:', error.message);
-            }
-        }
+        // ドラッグ終了時は自動最適化を実行しない（中間点の位置を保持するため）
+        // 自動最適化により中間点順序が変更されて経路線が元に戻ってしまうのを防ぐ
         
         // 経路線を再描画（マーカーは再作成しない）
         const allLoadedRoutes = this.dataManager.getLoadedRoutes();
