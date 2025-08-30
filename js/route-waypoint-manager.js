@@ -296,7 +296,7 @@ export class RouteWaypointManager {
                         
                         const marker = L.marker(mapPosition, {
                             icon: diamondIcon,
-                            draggable: true, // 常にdraggableをtrueにして、後で制御する
+                            draggable: false, // 初期状態ではドラッグ無効
                             zIndexOffset: isSelected ? 1000 : 500,
                             pane: 'waypointMarkers'
                         }).addTo(this.map);
@@ -310,12 +310,8 @@ export class RouteWaypointManager {
                             marker.onDynamicUpdate = onDynamicUpdate;
                         }
                         
-                        // 初期状態では選択されたルート以外はドラッグ無効
-                        if (!isSelected) {
-                            if (marker.dragging) {
-                                marker.dragging.disable();
-                            }
-                        } else {
+                        // 選択されたルートのみドラッグ終了時の処理を追加
+                        if (isSelected) {
                             // ドラッグ終了時の処理を追加
                             marker.on('dragend', (e) => {
                                 onWaypointDragEnd(e, point, routeData);

@@ -395,8 +395,13 @@ export class RouteEditor {
                 // ルートデータのコピーを作成してドラッグ中の座標で経路線を描画
                 const tempRouteData = this.createTempRouteForDrag(routeData, waypointData, tempImageX, tempImageY);
                 
-                // 経路線を再描画（一時的なルートデータを使用）
-                this.optimizer.drawRouteSegments(tempRouteData, (imageX, imageY) => {
+                // 全ルートの経路線を再描画（一時的なルートデータを使用）
+                const allLoadedRoutes = this.dataManager.getLoadedRoutes();
+                const tempAllRoutes = allLoadedRoutes.map(route => 
+                    route === routeData ? tempRouteData : route
+                );
+                
+                this.optimizer.drawMultipleRouteSegments(tempAllRoutes, (imageX, imageY) => {
                     return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
                 });
             }
