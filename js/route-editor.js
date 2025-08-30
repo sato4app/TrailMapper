@@ -30,7 +30,6 @@ export class RouteEditor {
             deleteRouteBtn: document.getElementById('deleteRouteBtn'),
             clearRouteBtn: document.getElementById('clearRouteBtn'),
             saveRouteBtn: document.getElementById('saveRouteBtn'),
-            segmentRouteBtn: document.getElementById('segmentRouteBtn'),
             optimizeRouteBtn: document.getElementById('optimizeRouteBtn'),
             saveGeoJsonRouteBtn: document.getElementById('saveGeoJsonRouteBtn')
         };
@@ -98,7 +97,6 @@ export class RouteEditor {
         const directActions = [
             { element: this.elements.clearRouteBtn, handler: () => this.clearSelectedRoute() },
             { element: this.elements.saveRouteBtn, handler: () => this.saveSelectedRoute() },
-            { element: this.elements.segmentRouteBtn, handler: () => this.drawRouteSegments() },
             { element: this.elements.optimizeRouteBtn, handler: () => this.optimizeRoute() },
             { element: this.elements.saveGeoJsonRouteBtn, handler: () => {} } // GeoJSON出力機能（未実装）
         ];
@@ -422,23 +420,6 @@ export class RouteEditor {
         }
     }
 
-    // 経路線を描画する機能
-    drawRouteSegments() {
-        const selectedRoute = this.getSelectedRoute();
-        if (!selectedRoute) {
-            this.showMessage('error', 'エラー', 'ルートを選択してください。');
-            return;
-        }
-
-        try {
-            this.optimizer.drawRouteSegments(selectedRoute, (imageX, imageY) => {
-                return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
-            });
-        } catch (error) {
-            this.showMessage('error', '経路線描画エラー', error.message);
-        }
-    }
-
     // ルート最適化機能（中間点の順序を最適化して総距離を最小化）
     optimizeRoute() {
         const selectedRoute = this.getSelectedRoute();
@@ -478,9 +459,6 @@ export class RouteEditor {
                     }
                 }
             }
-
-            // 最適化後に経路線を自動的に引き直す（重複を避けるためコメントアウト）
-            // this.drawRouteSegments();
 
         } catch (error) {
             if (error.message.includes('最適化する中間点がありません')) {
