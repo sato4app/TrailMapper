@@ -229,10 +229,16 @@ export class RouteEditor {
     }
 
     // ルートデータ更新と表示更新の統一処理
-    updateRouteDataAndDisplay(routeData) {
+    updateRouteDataAndDisplay(routeData, skipDisplayUpdate = false) {
         this.dataManager.updateRouteData(routeData);
         this.updateRouteOptionValue(routeData);
-        this.displayAllRoutes(routeData);
+        
+        // 表示更新をスキップしない場合のみマーカーを再作成
+        if (!skipDisplayUpdate) {
+            this.displayAllRoutes(routeData);
+            // マーカー再作成後にドラッグ状態を復元
+            this.updateMarkerDraggableState();
+        }
         
         // 全ルートの経路線を再描画（移動後の経路線更新）
         const allLoadedRoutes = this.dataManager.getLoadedRoutes();
@@ -293,7 +299,7 @@ export class RouteEditor {
             this.selectedActionButton,
             // ドラッグ終了時のコールバック（移動時の更新マーク付与）
             (routeData) => {
-                this.updateRouteDataAndDisplay(routeData);
+                this.updateRouteDataAndDisplay(routeData, true); // 表示更新をスキップ
             }
         );
     }
