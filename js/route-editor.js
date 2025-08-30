@@ -354,30 +354,49 @@ export class RouteEditor {
     // ドラッグ中の経路線動的更新
     updateRouteLinesDuringDrag(e, waypointData, routeData) {
         try {
-            // 一時的にウェイポイントの位置を更新して経路線を再描画
+            // ドラッグ中の新しい位置を取得
             const newPosition = e.target.getLatLng();
             const imageCoords = this.waypointManager.convertMapToImageCoordinates(newPosition.lat, newPosition.lng);
             
             if (imageCoords) {
-                // 一時的にウェイポイントの座標を更新
-                const originalImageX = waypointData.imageX;
-                const originalImageY = waypointData.imageY;
+                // ドラッグ中の座標を一時的に保存（元の座標は保持しない）
+                const tempImageX = Math.round(imageCoords.x);
+                const tempImageY = Math.round(imageCoords.y);
                 
-                waypointData.imageX = Math.round(imageCoords.x);
-                waypointData.imageY = Math.round(imageCoords.y);
+                // ルートデータのコピーを作成してドラッグ中の座標で経路線を描画
+                const tempRouteData = this.createTempRouteForDrag(routeData, waypointData, tempImageX, tempImageY);
                 
-                // 経路線を再描画
-                this.optimizer.drawRouteSegments(routeData, (imageX, imageY) => {
+                // 経路線を再描画（一時的なルートデータを使用）
+                this.optimizer.drawRouteSegments(tempRouteData, (imageX, imageY) => {
                     return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
                 });
-                
-                // 一時的な変更を元に戻す（ドラッグ終了まで確定しない）
-                waypointData.imageX = originalImageX;
-                waypointData.imageY = originalImageY;
             }
         } catch (error) {
             console.warn('ドラッグ中の経路線更新エラー:', error.message);
         }
+    }
+    
+    // ドラッグ中の経路線描画用に一時的なルートデータを作成
+    createTempRouteForDrag(originalRouteData, draggedWaypoint, newImageX, newImageY) {
+        // 元のルートデータの構造を保持してコピー
+        const tempRouteData = JSON.parse(JSON.stringify(originalRouteData));
+        
+        // ドラッグ中のウェイポイントの座標を更新
+        const waypoints = this.getWaypoints(tempRouteData);
+        if (waypoints) {
+            const targetWaypoint = waypoints.find(wp => 
+                wp.imageX === draggedWaypoint.imageX && 
+                wp.imageY === draggedWaypoint.imageY &&
+                wp.index === draggedWaypoint.index
+            );
+            
+            if (targetWaypoint) {
+                targetWaypoint.imageX = newImageX;
+                targetWaypoint.imageY = newImageY;
+            }
+        }
+        
+        return tempRouteData;
     }
 
     // 統一されたメッセージ表示機能
