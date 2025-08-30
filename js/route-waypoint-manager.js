@@ -268,7 +268,7 @@ export class RouteWaypointManager {
     }
 
     // ウェイポイントマーカーを地図に追加
-    addRouteToMap(routeData, isSelected, onWaypointDragEnd, onSpecificWaypointDelete) {
+    addRouteToMap(routeData, isSelected, onWaypointDragEnd, onSpecificWaypointDelete, onDynamicUpdate = null) {
         const wayPoints = this.getWaypoints(routeData);
         
         if (wayPoints && Array.isArray(wayPoints)) {
@@ -304,6 +304,11 @@ export class RouteWaypointManager {
                         // マーカーにウェイポイントデータを保存
                         marker.waypointData = point;
                         marker.routeData = routeData;
+                        
+                        // 動的更新コールバックを設定
+                        if (onDynamicUpdate) {
+                            marker.onDynamicUpdate = onDynamicUpdate;
+                        }
                         
                         // 初期状態では選択されたルート以外はドラッグ無効
                         if (!isSelected) {
@@ -343,7 +348,16 @@ export class RouteWaypointManager {
                 }
                 
                 // ドラッグイベントを追加（重複追加を防ぐため一旦削除）
-                marker.off('dragend');
+                marker.off('drag dragend');
+                
+                // ドラッグ中の動的更新
+                marker.on('drag', (e) => {
+                    if (marker.onDynamicUpdate) {
+                        marker.onDynamicUpdate(e, marker.waypointData, marker.routeData);
+                    }
+                });
+                
+                // ドラッグ終了時の確定処理
                 marker.on('dragend', (e) => {
                     this.onWaypointDragEnd(e, marker.waypointData, marker.routeData, (routeData) => {
                         // コールバック処理は外部で実装
@@ -354,7 +368,7 @@ export class RouteWaypointManager {
                 if (marker.dragging) {
                     marker.dragging.disable();
                 }
-                marker.off('dragend');
+                marker.off('drag dragend');
             }
         });
     }
