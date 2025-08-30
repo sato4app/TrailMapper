@@ -339,7 +339,7 @@ export class RouteWaypointManager {
     }
 
     // マーカーのドラッグ可能状態を更新
-    updateMarkerDraggableState(selectedRoute, selectedActionButton) {
+    updateMarkerDraggableState(selectedRoute, selectedActionButton, onDragEndCallback = null) {
         this.waypointMarkers.forEach(marker => {
             if (marker.routeData === selectedRoute && selectedActionButton === 'move') {
                 // ドラッグを有効化
@@ -360,7 +360,9 @@ export class RouteWaypointManager {
                 // ドラッグ終了時の確定処理
                 marker.on('dragend', (e) => {
                     this.onWaypointDragEnd(e, marker.waypointData, marker.routeData, (routeData) => {
-                        // コールバック処理は外部で実装
+                        if (onDragEndCallback) {
+                            onDragEndCallback(routeData);
+                        }
                     });
                 });
             } else {
