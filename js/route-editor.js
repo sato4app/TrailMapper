@@ -123,35 +123,46 @@ export class RouteEditor {
     // 複数のルートJSONファイルを一度に読み込む
     async loadMultipleRouteJSONs(files) {
         try {
-            const results = await this.dataManager.loadMultipleRouteJSONs(files);
+            const loadResult = await this.dataManager.loadMultipleRouteJSONs(files);
             
-            // 警告がある場合は表示
-            results.forEach(routeData => {
+            // エラーがあった場合はメッセージを表示
+            if (loadResult.errors && loadResult.errors.length > 0) {
+                const errorMessages = loadResult.errors.map(e => `${e.fileName}: ${e.error}`).join('\n');
+                this.showMessage('error', 'ルート読み込みエラー', errorMessages);
+            }
+            
+            // 成功したルートについて警告がある場合は表示
+            loadResult.successful.forEach(routeData => {
                 if (routeData._validationWarnings && routeData._validationWarnings.length > 0) {
                     this.showMessage('warning', 'ルートJSONファイル検証警告', routeData._validationWarnings.join('\n'));
                 }
             });
 
-            // ドロップダウンリストを更新（全ルートを追加）
-            this.updateRouteSelector();
-            
-            // ドロップダウンで実際に選択されているルートを取得して表示
-            const selectedRoute = this.getSelectedRoute();
-            this.displayAllRoutes(selectedRoute);
-            
-            // 読み込み後、複数ルートの経路線を自動的に描画
-            const allLoadedRoutes = this.dataManager.getLoadedRoutes();
-            if (allLoadedRoutes.length > 0) {
-                try {
-                    this.optimizer.drawMultipleRouteSegments(allLoadedRoutes, (imageX, imageY) => {
-                        return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
-                    });
-                } catch (error) {
-                    console.warn('自動複数ルート経路線描画エラー:', error.message);
+            // 成功したルートがある場合のみ処理を継続
+            if (loadResult.successful.length > 0) {
+                // ドロップダウンリストを更新（全ルートを追加）
+                this.updateRouteSelector();
+                
+                // ドロップダウンで実際に選択されているルートを取得して表示
+                const selectedRoute = this.getSelectedRoute();
+                this.displayAllRoutes(selectedRoute);
+                
+                // 読み込み後、複数ルートの経路線を自動的に描画
+                const allLoadedRoutes = this.dataManager.getLoadedRoutes();
+                if (allLoadedRoutes.length > 0) {
+                    try {
+                        this.optimizer.drawMultipleRouteSegments(allLoadedRoutes, (imageX, imageY) => {
+                            return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
+                        });
+                    } catch (error) {
+                        console.warn('自動複数ルート経路線描画エラー:', error.message);
+                    }
                 }
+            } else {
+                this.showMessage('warning', '読み込み結果', 'すべてのファイルでエラーが発生し、読み込めるルートがありませんでした。');
             }
             
-            return results;
+            return loadResult;
         } catch (error) {
             throw error;
         }

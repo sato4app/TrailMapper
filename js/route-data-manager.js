@@ -27,14 +27,33 @@ export class RouteDataManager {
         const loadPromises = [];
         
         for (let i = 0; i < files.length; i++) {
-            loadPromises.push(this.loadRouteJSON(files[i]));
+            loadPromises.push(
+                this.loadRouteJSON(files[i])
+                    .then(result => ({ success: true, result, fileName: files[i].name }))
+                    .catch(error => ({ success: false, error: error.message, fileName: files[i].name }))
+            );
         }
         
         try {
             const results = await Promise.all(loadPromises);
-            return results;
+            
+            // 成功した結果のみを抽出
+            const successfulResults = results.filter(r => r.success).map(r => r.result);
+            
+            // エラーがあった場合はコンソールに出力（重大なエラーも含む）
+            const errors = results.filter(r => !r.success);
+            errors.forEach(errorResult => {
+                console.warn(`ファイル ${errorResult.fileName} の読み込み: ${errorResult.error}`);
+            });
+            
+            // エラー結果も含めて返す（呼び出し元でエラーメッセージを表示可能）
+            return {
+                successful: successfulResults,
+                errors: errors,
+                allResults: results
+            };
         } catch (error) {
-            throw new Error(`複数ファイル読み込み中にエラーが発生しました: ${error.message}`);
+            throw new Error(`複数ファイル読み込み中に予期しないエラーが発生しました: ${error.message}`);
         }
     }
 
@@ -50,7 +69,17 @@ export class RouteDataManager {
                     // JSONファイル内容の検証
                     const validationResult = this.validateRouteJSON(routeData);
                     if (!validationResult.isValid) {
-                        // 警告は呼び出し元で処理
+                        // 重大なエラー（重複や開始=終了）の場合はエラーとして返す
+                        const { startPoint, endPoint } = this.getRoutePoints(routeData);
+                        const isDuplicate = validationResult.warnings.some(w => w.includes('既に読み込まれています'));
+                        const isSamePoint = validationResult.warnings.some(w => w.includes('が同じです'));
+                        
+                        if (isDuplicate || isSamePoint) {
+                            reject(new Error(validationResult.warnings.join('\n')));
+                            return;
+                        }
+                        
+                        // その他の警告は呼び出し元で処理
                         routeData._validationWarnings = validationResult.warnings;
                     }
                     
@@ -107,6 +136,21 @@ export class RouteDataManager {
         const { startPoint, endPoint } = this.getRoutePoints(routeData);
         const wayPoint = this.getWaypoints(routeData);
         const wayPointCount = routeData.wayPointCount || routeData.waypointCount || (routeData.routeInfo && routeData.routeInfo.waypointCount);
+        
+        // 開始ポイントと終了ポイントが同じ場合のチェック
+        if (startPoint && endPoint && startPoint === endPoint) {
+            warnings.push(`開始ポイント "${startPoint}" と終了ポイント "${endPoint}" が同じです。異なるポイントを指定してください。`);
+            isValid = false;
+        }
+        
+        // 同じルート（開始・終了ポイントが同じ）の重複チェック
+        if (startPoint && endPoint) {
+            const existingRoute = this.findExistingRoute(startPoint, endPoint);
+            if (existingRoute) {
+                warnings.push(`同じルート（${startPoint} → ${endPoint}）は既に読み込まれています。重複する読み込みはスキップされます。`);
+                isValid = false;
+            }
+        }
         
         // imageReferenceの値が読み込んでいるpng画像のファイル名と一致するかチェック
         if (routeData.imageReference && this.imageOverlay && this.imageOverlay.currentImageFileName) {
@@ -261,5 +305,13 @@ export class RouteDataManager {
     // 全ルートをクリア
     clearAllRoutes() {
         this.loadedRoutes = [];
+    }
+
+    // 同じ開始・終了ポイントを持つ既存ルートを検索
+    findExistingRoute(startPoint, endPoint) {
+        return this.loadedRoutes.find(route => {
+            const routePoints = this.getRoutePoints(route);
+            return routePoints.startPoint === startPoint && routePoints.endPoint === endPoint;
+        });
     }
 }
