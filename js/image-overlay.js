@@ -1,4 +1,6 @@
 // 画像オーバーレイ機能を管理するモジュール
+import { DEFAULTS } from './constants.js';
+
 export class ImageOverlay {
     constructor(mapCore) {
         this.map = mapCore.getMap();
@@ -16,13 +18,13 @@ export class ImageOverlay {
         this.isCenteringMode = false;
         this.imageUpdateCallbacks = [];
         
-        // 内部scale管理（初期値はconfig.jsonから取得）
+        // 内部scale管理（初期値はconstantsから取得）
         this.currentScale = this.getDefaultScale();
         
-        // config.jsonから初期スケール値を取得してUIに設定
+        // 初期スケール値を設定
         this.initializeScaleInput();
         
-        // config.jsonから初期透過度を取得してUIに設定
+        // 初期透過度を取得してUIに設定
         this.initializeOpacityInput();
         
         // 中心マーカーは画像読み込み後に表示するため、初期化のみ行う
@@ -30,13 +32,13 @@ export class ImageOverlay {
         this.setupEventHandlers();
     }
 
-    // config.jsonから初期スケール値を設定（UIフィールドは削除済み）
+    // 初期スケール値を設定（UIフィールドは削除済み）
     initializeScaleInput() {
         // scaleInputフィールドは削除されたため、内部scaleのみ初期化
         this.currentScale = this.getDefaultScale();
     }
 
-    // config.jsonから初期透過度を取得してUIに設定
+    // 初期透過度を取得してUIに設定
     initializeOpacityInput() {
         const opacityInput = document.getElementById('opacityInput');
         if (opacityInput) {
@@ -45,22 +47,14 @@ export class ImageOverlay {
         }
     }
 
-    // config.jsonからデフォルトスケール値を取得
+    // デフォルトスケール値を取得
     getDefaultScale() {
-        const config = this.mapCore.getConfig();
-        if (config && config.imageOverlay && config.imageOverlay.defaultScale) {
-            return config.imageOverlay.defaultScale;
-        }
-        return 0.8; // フォールバック値
+        return DEFAULTS.IMAGE_OVERLAY_DEFAULT_SCALE;
     }
 
-    // config.jsonからデフォルト透過度を取得
+    // デフォルト透過度を取得
     getDefaultOpacity() {
-        const config = this.mapCore.getConfig();
-        if (config && config.imageOverlay && config.imageOverlay.defaultOpacity) {
-            return config.imageOverlay.defaultOpacity;
-        }
-        return 50; // フォールバック値
+        return DEFAULTS.IMAGE_OVERLAY_DEFAULT_OPACITY;
     }
 
     // 現在のscale値を取得

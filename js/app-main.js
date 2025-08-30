@@ -7,9 +7,13 @@ import { RouteEditor } from './route-editor.js';
 import { ModeSwitcher } from './mode-switcher.js';
 import { PointInfoManager } from './point-info-manager.js';
 import { PointEditor } from './point-editor.js';
+import { CONFIG, EVENTS, SELECTORS } from './constants.js';
+import { Logger } from './utils/logger.js';
+import { errorHandler } from './utils/error-handler.js';
 
 class GSIMapApp {
     constructor() {
+        this.logger = new Logger('GSIMapApp');
         this.mapCore = null;
         this.imageOverlay = null;
         this.gpsData = null;
@@ -18,48 +22,88 @@ class GSIMapApp {
         this.modeSwitcher = null;
         this.pointInfoManager = null;
         this.pointEditor = null;
+        
+        this.logger.info('GSIMapApp初期化開始');
     }
 
     async init() {
-        // ModeSwitcherは常に初期化（地図に依存しない）
-        this.modeSwitcher = new ModeSwitcher();
-        
-        // コアモジュール初期化
-        this.mapCore = new MapCore();
-        
-        // MapCoreの初期化完了を待つ
-        await this.waitForMapInitialization();
-        
-        // PointInfoManagerを常に初期化（mapはnullでも可）
-        this.pointInfoManager = new PointInfoManager(null);
-        
-        // イベントハンドラー設定（地図の初期化に関係なく実行）
-        this.setupEventHandlers();
-        
-        // 地図が初期化されていない場合は、地図関連モジュールの初期化をスキップ
-        if (!this.mapCore.getMap()) {
-            return;
+        try {
+            this.logger.info('アプリケーション初期化開始');
+            
+            // ModeSwitcherは常に初期化（地図に依存しない）
+            this.modeSwitcher = new ModeSwitcher();
+            this.logger.debug('ModeSwitcher初期化完了');
+            
+            // コアモジュール初期化
+            this.mapCore = new MapCore();
+            this.logger.debug('MapCore初期化開始');
+            
+            // MapCoreの初期化完了を待つ
+            await this.waitForMapInitialization();
+            
+            // PointInfoManagerを常に初期化（mapはnullでも可）
+            this.pointInfoManager = new PointInfoManager(null);
+            this.logger.debug('PointInfoManager初期化完了');
+            
+            // イベントハンドラー設定（地図の初期化に関係なく実行）
+            this.setupEventHandlers();
+            this.logger.debug('イベントハンドラー設定完了');
+            
+            // 地図が初期化されていない場合は、地図関連モジュールの初期化をスキップ
+            if (!this.mapCore.getMap()) {
+                this.logger.warn('地図の初期化に失敗。地図関連モジュールをスキップします');
+                return;
+            }
+            
+            // 地図が初期化された後でPointInfoManagerにマップを設定
+            this.pointInfoManager.setMap(this.mapCore.getMap());
+            this.logger.debug('PointInfoManagerにマップ設定完了');
+            
+            // 各機能モジュール初期化
+            await this.initializeModules();
+            
+            this.logger.info('アプリケーション初期化完了');
+            
+        } catch (error) {
+            this.logger.error('アプリケーション初期化中にエラーが発生', error);
+            errorHandler.showError('初期化エラー', 'アプリケーションの初期化中にエラーが発生しました。');
         }
-        
-        // 地図が初期化された後でPointInfoManagerにマップを設定
-        this.pointInfoManager.setMap(this.mapCore.getMap());
-        
-        // 各機能モジュール初期化（PointInfoManager参照を渡す）
-        this.imageOverlay = new ImageOverlay(this.mapCore);
-        this.gpsData = new GPSData(this.mapCore.getMap(), this.pointInfoManager);
-        
-        // ImageOverlayの初期化完了を少し待ってからPointOverlayを初期化
-        setTimeout(() => {
+    }
+    
+    /**
+     * 各機能モジュールを初期化
+     */
+    async initializeModules() {
+        try {
+            // ImageOverlay初期化
+            this.imageOverlay = new ImageOverlay(this.mapCore);
+            this.logger.debug('ImageOverlay初期化完了');
+            
+            // GPSData初期化
+            this.gpsData = new GPSData(this.mapCore.getMap(), this.pointInfoManager);
+            this.logger.debug('GPSData初期化完了');
+            
+            // ImageOverlayの初期化完了を少し待ってからPointOverlayを初期化
+            await new Promise(resolve => setTimeout(resolve, CONFIG.POINT_OVERLAY_INIT_DELAY));
             this.pointOverlay = new PointOverlay(this.mapCore.getMap(), this.imageOverlay, this.gpsData);
-        }, 100);
-        
-        this.routeEditor = new RouteEditor(this.mapCore.getMap(), this.imageOverlay, this.gpsData);
-        
-        // ポイント編集機能を初期化
-        this.pointEditor = new PointEditor(this.mapCore.getMap(), this.gpsData);
-        
-        // 既存のGPSデータからポイントを読み込み
-        this.pointEditor.loadExistingPoints();
+            this.logger.debug('PointOverlay初期化完了');
+            
+            // RouteEditor初期化
+            this.routeEditor = new RouteEditor(this.mapCore.getMap(), this.imageOverlay, this.gpsData);
+            this.logger.debug('RouteEditor初期化完了');
+            
+            // ポイント編集機能を初期化
+            this.pointEditor = new PointEditor(this.mapCore.getMap(), this.gpsData);
+            this.logger.debug('PointEditor初期化完了');
+            
+            // 既存のGPSデータからポイントを読み込み
+            this.pointEditor.loadExistingPoints();
+            this.logger.debug('既存GPSポイント読み込み完了');
+            
+        } catch (error) {
+            this.logger.error('モジュール初期化中にエラーが発生', error);
+            throw error;
+        }
     }
 
     // MapCoreの初期化完了を待つヘルパーメソッド

@@ -1,38 +1,15 @@
 // 地図コア機能を管理するモジュール
+import { DEFAULTS } from './constants.js';
+
 export class MapCore {
     constructor() {
-        this.config = null;
-        this.initialCenter = null;
-        this.initialZoom = null;
+        this.initialCenter = DEFAULTS.MAP_CENTER;
+        this.initialZoom = DEFAULTS.MAP_ZOOM;
         this.map = null;
         this.init();
     }
 
-    async loadConfig() {
-        try {
-            const response = await fetch('./config.json');
-            this.config = await response.json();
-            this.initialCenter = [
-                this.config.map.initialView.center.lat,
-                this.config.map.initialView.center.lng
-            ];
-            this.initialZoom = this.config.map.initialView.zoom;
-        } catch (error) {
-            console.warn('config.jsonの読み込みに失敗しました:', error);
-            this.showErrorMessage('設定ファイル読み込みエラー', 'config.jsonの読み込みに失敗しました。');
-            return false;
-        }
-        return true;
-    }
-
     async init() {
-        // 設定ファイルを読み込み
-        const configLoaded = await this.loadConfig();
-        
-        if (!configLoaded) {
-            // config.jsonの読み込みに失敗した場合、地図は初期化しない
-            return;
-        }
         
         // 地図の初期化
         this.map = L.map('map').setView(this.initialCenter, this.initialZoom);
@@ -71,8 +48,10 @@ export class MapCore {
         return this.initialCenter;
     }
 
+    // 設定値を取得（後方互換性のため残す）
     getConfig() {
-        return this.config;
+        // config.jsonは廃止されたため、nullを返す
+        return null;
     }
 
     showErrorMessage(title, message) {

@@ -3,15 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>国土地理院 地形図ビューア</title>
+    <meta name="description" content="国土地理院の地形図上でGPSポイントとルート編集を行うWebアプリケーション">
+    <meta name="keywords" content="地形図, GPS, ルート編集, 国土地理院, マップ">
+    <meta name="author" content="RouteEditor">
+    <title>RouteEditor - 国土地理院地形図ビューア</title>
 
+    <!-- セキュリティとパフォーマンスのためのメタタグ -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    
     <!-- ファビコンのリクエストを抑制して404エラーを防ぐ -->
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
 
+    <!-- 外部CDNリソースの事前接続でパフォーマンス向上 -->
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    
     <!-- Leaflet.js の CSS と JS を読み込み -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-        crossorigin=""/>
+        crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
@@ -21,171 +31,52 @@
 
     <!-- アプリケーション固有のスタイルシート -->
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles-extended.css">
 
-    <style>
-        /* body全体の余白をなくし、地図を全画面表示 */
-        body {
-            padding: 0;
-            margin: 0;
-        }
-        html, body, #map {
-            height: 100%;
-            width: 100vw;
-        }
-        /* アクティブ状態のボタンのスタイル */
-        .image-overlay-controls .leaflet-control.active {
-            background-color: #ddd;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-        }
-        /* コントロール内のテキストボックスのスタイル調整 */
-        .image-overlay-controls .leaflet-control input[type="text"] {
-            width: 90px; /* 幅を調整 */
-            border: none;
-            background-color: transparent;
-            pointer-events: none; /* クリックイベントを無効化 */
-            color: #333;
-        }
-        
-        /* ドラッグハンドルのアニメーション */
-        @keyframes dragHandlePulse {
-            0% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.8; }
-        }
-        
-        .drag-handle-pulse {
-            animation: dragHandlePulse 2s ease-in-out infinite;
-        }
-        
-        /* ドラッグハンドルのツールチップスタイル */
-        .drag-handle-tooltip {
-            background-color: rgba(0, 0, 0, 0.8) !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 4px !important;
-            font-size: 12px !important;
-            padding: 4px 8px !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
-        }
-        
-        /* ドラッグハンドルアイコンのスタイル */
-        .drag-handle-icon {
-            background: none !important;
-            border: none !important;
-        }
-        
-        .drag-handle-icon div {
-            transition: all 0.2s ease;
-        }
-        
-        .drag-handle-icon:hover div {
-            transform: scale(1.3);
-            background-color: #00bfff !important;
-            box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
-        }
-        
-        /* リサイズ情報ツールチップのスタイル */
-        .resize-info-tooltip {
-            background-color: rgba(0, 0, 0, 0.9) !important;
-            color: #fff !important;
-            border: none !important;
-            border-radius: 6px !important;
-            font-size: 14px !important;
-            font-weight: bold !important;
-            padding: 6px 12px !important;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
-        }
-        
-        /* 中心座標マーカーのスタイル */
-        .center-marker-icon {
-            background: none !important;
-            border: none !important;
-        }
-        
-        .center-marker-icon div {
-            box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
-            transition: all 0.2s ease;
-        }
-        
-        .center-marker-icon:hover div {
-            transform: scale(1.3);
-            background-color: #00bfff !important;
-            box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
-        }
-        
-        /* 中心座標マーカーのツールチップスタイル */
-        .center-marker-tooltip {
-            background-color: rgba(0, 0, 0, 0.8) !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 4px !important;
-            font-size: 12px !important;
-            padding: 4px 8px !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
-        }
-        
-        /* ポイント操作ボタンのスタイル */
-        .point-action-btn {
-            border: 2px solid #28a745;
-            color: #28a745;
-            background-color: white;
-            padding: 6px 12px;
-            margin: 0 4px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            transition: all 0.2s ease;
-            width: 60px;
-        }
-        
-        .point-action-btn:hover {
-            background-color: #28a745;
-            color: white;
-        }
-        
-        .point-action-btn.selected {
-            background-color: #28a745;
-            color: white;
-        }
-        
-        .point-action-buttons {
-            margin-top: 10px;
-            text-align: left;
-        }
-    </style>
 </head>
 <body>
-    <div id="map"></div>
+    <!-- メイン地図コンテナ -->
+    <main id="map" role="main" aria-label="国土地理院地形図"></main>
 
-    <!-- オーバーレイコントロールパネル -->
-    <div class="overlay-controls">
+    <!-- アプリケーション制御パネル -->
+    <aside class="overlay-controls" role="complementary" aria-label="編集ツール">
         <!-- 編集モード選択 -->
-        <div class="editing-mode-selector">
-            <label class="editing-option">
-                <input type="radio" name="editingMode" value="point-gps" checked>
-                <span>ポイント(GPS)編集</span>
-            </label>
-            <label class="editing-option">
-                <input type="radio" name="editingMode" value="image-overlay">
-                <span>画像を地理院地図に重ね合わせ</span>
-            </label>
-            <label class="editing-option">
-                <input type="radio" name="editingMode" value="route">
-                <span>ルート編集</span>
-            </label>
-        </div>
+        <fieldset class="editing-mode-selector" aria-labelledby="mode-selector-legend">
+            <legend id="mode-selector-legend" class="visually-hidden">編集モード選択</legend>
+            <div class="editing-option">
+                <input type="radio" id="mode-point-gps" name="editingMode" value="point-gps" checked>
+                <label for="mode-point-gps">ポイント(GPS)編集</label>
+            </div>
+            <div class="editing-option">
+                <input type="radio" id="mode-image-overlay" name="editingMode" value="image-overlay">
+                <label for="mode-image-overlay">画像を地理院地図に重ね合わせ</label>
+            </div>
+            <div class="editing-option">
+                <input type="radio" id="mode-route" name="editingMode" value="route">
+                <label for="mode-route">ルート編集</label>
+            </div>
+        </fieldset>
 
         <!-- ポイント(GPS)編集モード -->
-        <div id="pointGpsEditor" class="editor-panel">
+        <section id="pointGpsEditor" class="editor-panel" aria-labelledby="gps-editor-title">
+            <h2 id="gps-editor-title" class="visually-hidden">GPS編集モード</h2>
+            
             <!-- GPS値(Excel)読み込みボタン -->
-            <input type="file" id="gpsCsvInput" accept=".xlsx" style="display: none;">
-            <button id="loadGpsBtn" title="GPS値を読み込む" class="leaflet-bar leaflet-control">GPS値(Excel)読み込み</button>
+            <input type="file" id="gpsCsvInput" accept=".xlsx" aria-label="GPSデータExcelファイル選択" style="display: none;">
+            <button id="loadGpsBtn" 
+                    type="button" 
+                    aria-describedby="load-gps-help" 
+                    class="leaflet-bar leaflet-control">
+                GPS値(Excel)読み込み
+            </button>
+            <div id="load-gps-help" class="visually-hidden">ExcelファイルからGPS座標データを読み込みます</div>
             
             <!-- ポイント数表示フィールド -->
             <div class="point-count-container">
                 <label for="pointCountField">ポイント数</label>
-                <input type="text" id="pointCountField" readonly value="0">
-                <span class="unit-label">個</span>
+                <input type="text" id="pointCountField" readonly value="0" aria-describedby="point-count-help">
+                <span class="unit-label" aria-hidden="true">個</span>
+                <div id="point-count-help" class="visually-hidden">現在読み込まれているGPSポイントの数</div>
             </div>
             
             
