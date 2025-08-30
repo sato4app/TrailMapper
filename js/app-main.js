@@ -7,7 +7,7 @@ import { RouteEditor } from './route-editor.js';
 import { ModeSwitcher } from './mode-switcher.js';
 import { PointInfoManager } from './point-info-manager.js';
 import { PointEditor } from './point-editor.js';
-import { CONFIG, EVENTS, SELECTORS } from './constants.js';
+import { CONFIG, EVENTS, DEFAULTS } from './constants.js';
 import { Logger } from './utils/logger.js';
 import { errorHandler } from './utils/error-handler.js';
 
