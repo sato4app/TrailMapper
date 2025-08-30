@@ -236,7 +236,7 @@ export class RouteEditor {
             const waypoints = this.getWaypoints(routeData);
             if (waypoints && waypoints.length >= 2) {
                 try {
-                    this.performRouteOptimization(routeData, false); // メッセージ表示なし
+                    this.performRouteOptimization(routeData, false, false); // メッセージなし、表示更新なし
                 } catch (error) {
                     console.warn('自動最適化エラー:', error.message);
                 }
@@ -433,7 +433,7 @@ export class RouteEditor {
     }
 
     // 内部用ルート最適化機能（メッセージ表示なし）
-    performRouteOptimization(routeData, showMessages = true) {
+    performRouteOptimization(routeData, showMessages = true, updateDisplay = true) {
         try {
             // 最適化前の中間点順序を保存
             const originalWaypoints = this.getWaypoints(routeData);
@@ -449,22 +449,31 @@ export class RouteEditor {
             // ルートデータを更新
             this.dataManager.updateWaypointsInRoute(routeData, optimizedOrder);
             
-            // 順序に変更があった場合のみ更新マークを付ける
-            if (hasOrderChanged) {
-                // 内部での最適化なので、自動最適化は無効化
-                this.dataManager.updateRouteData(routeData);
-                this.updateRouteOptionValue(routeData);
-            }
-            
-            // 経路線を再描画
-            const allLoadedRoutes = this.dataManager.getLoadedRoutes();
-            if (allLoadedRoutes.length > 0) {
-                try {
-                    this.optimizer.drawMultipleRouteSegments(allLoadedRoutes, (imageX, imageY) => {
-                        return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
-                    });
-                } catch (error) {
-                    console.warn('最適化後の経路線再描画エラー:', error.message);
+            // 表示更新を行う場合
+            if (updateDisplay) {
+                // 順序に変更があった場合のみ更新マークを付ける
+                if (hasOrderChanged) {
+                    // 内部での最適化なので、自動最適化は無効化
+                    this.dataManager.updateRouteData(routeData);
+                    this.updateRouteOptionValue(routeData);
+                }
+                
+                // 経路線を再描画
+                const allLoadedRoutes = this.dataManager.getLoadedRoutes();
+                if (allLoadedRoutes.length > 0) {
+                    try {
+                        this.optimizer.drawMultipleRouteSegments(allLoadedRoutes, (imageX, imageY) => {
+                            return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
+                        });
+                    } catch (error) {
+                        console.warn('最適化後の経路線再描画エラー:', error.message);
+                    }
+                }
+            } else {
+                // 表示更新なしの場合でも更新マークは付ける
+                if (hasOrderChanged) {
+                    this.dataManager.updateRouteData(routeData);
+                    this.updateRouteOptionValue(routeData);
                 }
             }
             
