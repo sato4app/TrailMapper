@@ -500,9 +500,6 @@ export class RouteEditor {
     onRouteSelectionChange() {
         if (!this.elements.routeSelect) return;
         
-        // 既存の経路線をクリア
-        this.optimizer.clearRouteLines();
-        
         // getSelectedRouteメソッドを使用して一貫性のある選択方法を使う
         const selectedRoute = this.getSelectedRoute();
         
@@ -511,6 +508,18 @@ export class RouteEditor {
             this.displayAllRoutes(selectedRoute);
             // マーカーのドラッグ可能状態を更新
             this.updateMarkerDraggableState();
+            
+            // 全ルートの経路線を維持するため再描画
+            const allLoadedRoutes = this.dataManager.getLoadedRoutes();
+            if (allLoadedRoutes.length > 0) {
+                try {
+                    this.optimizer.drawMultipleRouteSegments(allLoadedRoutes, (imageX, imageY) => {
+                        return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
+                    });
+                } catch (error) {
+                    console.warn('ルート選択変更時の経路線再描画エラー:', error.message);
+                }
+            }
         }
     }
 
