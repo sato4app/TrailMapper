@@ -448,16 +448,39 @@ export class RouteEditor {
         }
 
         try {
+            // 最適化前の中間点順序を保存
+            const originalWaypoints = this.getWaypoints(selectedRoute);
+            const originalOrder = [...originalWaypoints].map(wp => ({ index: wp.index, imageX: wp.imageX, imageY: wp.imageY }));
+            
             const optimizedOrder = this.optimizer.optimizeRoute(selectedRoute, (imageX, imageY) => {
                 return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
             });
 
+            // 最適化前後で順序に変更があるかチェック
+            const hasOrderChanged = this.checkIfWaypointOrderChanged(originalOrder, optimizedOrder);
+            
             // ルートデータを更新
             this.dataManager.updateWaypointsInRoute(selectedRoute, optimizedOrder);
-            this.updateRouteDataAndDisplay(selectedRoute);
+            
+            // 順序に変更があった場合のみ更新マークを付ける
+            if (hasOrderChanged) {
+                this.updateRouteDataAndDisplay(selectedRoute);
+            } else {
+                // 順序変更がない場合は経路線のみ再描画
+                const allLoadedRoutes = this.dataManager.getLoadedRoutes();
+                if (allLoadedRoutes.length > 0) {
+                    try {
+                        this.optimizer.drawMultipleRouteSegments(allLoadedRoutes, (imageX, imageY) => {
+                            return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
+                        });
+                    } catch (error) {
+                        console.warn('最適化後の経路線再描画エラー:', error.message);
+                    }
+                }
+            }
 
-            // 最適化後に経路線を自動的に引き直す
-            this.drawRouteSegments();
+            // 最適化後に経路線を自動的に引き直す（重複を避けるためコメントアウト）
+            // this.drawRouteSegments();
 
         } catch (error) {
             if (error.message.includes('最適化する中間点がありません')) {
@@ -466,6 +489,27 @@ export class RouteEditor {
                 this.showMessage('error', '最適化エラー', error.message);
             }
         }
+    }
+
+    // 中間点の順序に変更があったかチェック
+    checkIfWaypointOrderChanged(originalOrder, optimizedOrder) {
+        // 配列の長さが違う場合は変更あり
+        if (originalOrder.length !== optimizedOrder.length) {
+            return true;
+        }
+        
+        // 各要素の位置関係をチェック（indexではなく実際の座標で比較）
+        for (let i = 0; i < originalOrder.length; i++) {
+            const original = originalOrder[i];
+            const optimized = optimizedOrder[i];
+            
+            // 同じ位置にある中間点の座標が違う場合は順序が変わっている
+            if (original.imageX !== optimized.imageX || original.imageY !== optimized.imageY) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     // ルート選択用ドロップダウンリストの更新
