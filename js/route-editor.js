@@ -139,6 +139,18 @@ export class RouteEditor {
             const selectedRoute = this.getSelectedRoute();
             this.displayAllRoutes(selectedRoute);
             
+            // 読み込み後、複数ルートの経路線を自動的に描画
+            const allLoadedRoutes = this.dataManager.getLoadedRoutes();
+            if (allLoadedRoutes.length > 0) {
+                try {
+                    this.optimizer.drawMultipleRouteSegments(allLoadedRoutes, (imageX, imageY) => {
+                        return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
+                    });
+                } catch (error) {
+                    console.warn('自動複数ルート経路線描画エラー:', error.message);
+                }
+            }
+            
             return results;
         } catch (error) {
             throw error;

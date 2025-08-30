@@ -19,7 +19,82 @@ export class RouteOptimizer {
         };
     }
 
-    // 経路線を描画する機能
+    // 複数ルートの経路線を一度に描画する機能
+    drawMultipleRouteSegments(routes, convertImageToMapCoordinates) {
+        if (!routes || routes.length === 0) {
+            return;
+        }
+
+        try {
+            // 既存の経路線をクリア
+            this.clearRouteLines();
+
+            // 各ルートについて経路線を描画
+            routes.forEach((route, routeIndex) => {
+                this.drawSingleRouteSegment(route, convertImageToMapCoordinates, routeIndex);
+            });
+
+        } catch (error) {
+            console.warn(`複数ルート経路線描画エラー: ${error.message}`);
+        }
+    }
+
+    // 単一ルートの経路線を描画（内部用）
+    drawSingleRouteSegment(route, convertImageToMapCoordinates, routeIndex = 0) {
+        try {
+            // 開始・終了ポイント名を取得
+            const { startPoint: startPointName, endPoint: endPointName } = this.getRoutePoints(route);
+            
+            // 開始・終了ポイントを取得
+            const startPoint = this.getGpsPointByName(startPointName);
+            const endPoint = this.getGpsPointByName(endPointName);
+
+            if (!startPoint || !endPoint) {
+                console.warn(`ルート ${routeIndex + 1}: 開始または終了ポイントが見つかりません`);
+                return;
+            }
+
+            // 中間点を取得してindex順でソート
+            const wayPoints = this.getWaypoints(route);
+            const sortedWayPoints = [...wayPoints].sort((a, b) => (a.index || 0) - (b.index || 0));
+
+            // ルートポイントの座標配列を構築
+            const routeCoordinates = [];
+
+            // 開始ポイントを追加
+            routeCoordinates.push([startPoint.latitude, startPoint.longitude]);
+
+            // 中間点を追加
+            for (const waypoint of sortedWayPoints) {
+                const mapPosition = convertImageToMapCoordinates(waypoint.imageX, waypoint.imageY);
+                if (mapPosition) {
+                    routeCoordinates.push(mapPosition);
+                }
+            }
+
+            // 終了ポイントを追加
+            routeCoordinates.push([endPoint.latitude, endPoint.longitude]);
+
+            // 線を描画（すべて赤色で統一）
+            if (routeCoordinates.length >= 2) {
+                const routeLine = L.polyline(routeCoordinates, {
+                    color: '#ff0000',
+                    weight: 2,
+                    opacity: 0.8,
+                    smoothFactor: 1,
+                    pane: 'routeLines'
+                });
+
+                routeLine.addTo(this.map);
+                this.routeLines.push(routeLine);
+            }
+
+        } catch (error) {
+            console.warn(`ルート ${routeIndex + 1} 描画エラー: ${error.message}`);
+        }
+    }
+
+    // 経路線を描画する機能（既存）
     drawRouteSegments(selectedRoute, convertImageToMapCoordinates) {
         if (!selectedRoute) {
             throw new Error('ルートを選択してください。');
