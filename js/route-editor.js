@@ -227,9 +227,21 @@ export class RouteEditor {
     }
 
     // ルートデータ更新と表示更新の統一処理
-    updateRouteDataAndDisplay(routeData, skipDisplayUpdate = false) {
+    updateRouteDataAndDisplay(routeData, skipDisplayUpdate = false, autoOptimize = true) {
         this.dataManager.updateRouteData(routeData);
         this.updateRouteOptionValue(routeData);
+        
+        // 自動最適化を実行（中間点が2つ以上ある場合）
+        if (autoOptimize) {
+            const waypoints = this.getWaypoints(routeData);
+            if (waypoints && waypoints.length >= 2) {
+                try {
+                    this.performRouteOptimization(routeData, false); // メッセージ表示なし
+                } catch (error) {
+                    console.warn('自動最適化エラー:', error.message);
+                }
+            }
+        }
         
         // 表示更新をスキップしない場合のみマーカーを再作成
         if (!skipDisplayUpdate) {
@@ -420,20 +432,14 @@ export class RouteEditor {
         }
     }
 
-    // ルート最適化機能（中間点の順序を最適化して総距離を最小化）
-    optimizeRoute() {
-        const selectedRoute = this.getSelectedRoute();
-        if (!selectedRoute) {
-            this.showMessage('error', 'エラー', 'ルートを選択してください。');
-            return;
-        }
-
+    // 内部用ルート最適化機能（メッセージ表示なし）
+    performRouteOptimization(routeData, showMessages = true) {
         try {
             // 最適化前の中間点順序を保存
-            const originalWaypoints = this.getWaypoints(selectedRoute);
+            const originalWaypoints = this.getWaypoints(routeData);
             const originalOrder = [...originalWaypoints].map(wp => ({ index: wp.index, imageX: wp.imageX, imageY: wp.imageY }));
             
-            const optimizedOrder = this.optimizer.optimizeRoute(selectedRoute, (imageX, imageY) => {
+            const optimizedOrder = this.optimizer.optimizeRoute(routeData, (imageX, imageY) => {
                 return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
             });
 
@@ -441,32 +447,50 @@ export class RouteEditor {
             const hasOrderChanged = this.checkIfWaypointOrderChanged(originalOrder, optimizedOrder);
             
             // ルートデータを更新
-            this.dataManager.updateWaypointsInRoute(selectedRoute, optimizedOrder);
+            this.dataManager.updateWaypointsInRoute(routeData, optimizedOrder);
             
             // 順序に変更があった場合のみ更新マークを付ける
             if (hasOrderChanged) {
-                this.updateRouteDataAndDisplay(selectedRoute);
-            } else {
-                // 順序変更がない場合は経路線のみ再描画
-                const allLoadedRoutes = this.dataManager.getLoadedRoutes();
-                if (allLoadedRoutes.length > 0) {
-                    try {
-                        this.optimizer.drawMultipleRouteSegments(allLoadedRoutes, (imageX, imageY) => {
-                            return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
-                        });
-                    } catch (error) {
-                        console.warn('最適化後の経路線再描画エラー:', error.message);
-                    }
+                // 内部での最適化なので、自動最適化は無効化
+                this.dataManager.updateRouteData(routeData);
+                this.updateRouteOptionValue(routeData);
+            }
+            
+            // 経路線を再描画
+            const allLoadedRoutes = this.dataManager.getLoadedRoutes();
+            if (allLoadedRoutes.length > 0) {
+                try {
+                    this.optimizer.drawMultipleRouteSegments(allLoadedRoutes, (imageX, imageY) => {
+                        return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
+                    });
+                } catch (error) {
+                    console.warn('最適化後の経路線再描画エラー:', error.message);
                 }
             }
+            
+            return { success: true, hasOrderChanged };
 
         } catch (error) {
-            if (error.message.includes('最適化する中間点がありません')) {
-                this.showMessage('warning', '情報', error.message);
-            } else {
-                this.showMessage('error', '最適化エラー', error.message);
+            if (showMessages) {
+                if (error.message.includes('最適化する中間点がありません')) {
+                    this.showMessage('warning', '情報', error.message);
+                } else {
+                    this.showMessage('error', '最適化エラー', error.message);
+                }
             }
+            return { success: false, error: error.message };
         }
+    }
+
+    // UI用ルート最適化機能（ユーザーが手動で実行）
+    optimizeRoute() {
+        const selectedRoute = this.getSelectedRoute();
+        if (!selectedRoute) {
+            this.showMessage('error', 'エラー', 'ルートを選択してください。');
+            return;
+        }
+
+        this.performRouteOptimization(selectedRoute, true);
     }
 
     // 中間点の順序に変更があったかチェック
