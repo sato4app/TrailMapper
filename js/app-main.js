@@ -39,7 +39,8 @@ class GSIMapApp {
             this.logger.debug('MapCore初期化開始');
             
             // MapCoreの初期化完了を待つ
-            await this.waitForMapInitialization();
+            await this.mapCore.initPromise;
+            this.logger.debug('MapCore初期化Promise完了');
             
             // PointInfoManagerを常に初期化（mapはnullでも可）
             this.pointInfoManager = new PointInfoManager(null);
@@ -111,9 +112,21 @@ class GSIMapApp {
         let attempts = 0;
         const maxAttempts = 50; // 最大5秒待機
         
+        this.logger.debug('地図初期化待機開始');
+        
         while (!this.mapCore.getMap() && attempts < maxAttempts) {
             await new Promise(resolve => setTimeout(resolve, 100));
             attempts++;
+            
+            if (attempts % 10 === 0) {
+                this.logger.debug(`地図初期化待機中... ${attempts * 100}ms経過`);
+            }
+        }
+        
+        if (!this.mapCore.getMap()) {
+            this.logger.warn('地図初期化タイムアウト');
+        } else {
+            this.logger.debug(`地図初期化完了 (${attempts * 100}ms)`);
         }
     }
 

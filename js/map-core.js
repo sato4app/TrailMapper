@@ -6,23 +6,48 @@ export class MapCore {
         this.initialCenter = DEFAULTS.MAP_CENTER;
         this.initialZoom = DEFAULTS.MAP_ZOOM;
         this.map = null;
-        this.init();
+        this.initPromise = this.init();
     }
 
-    init() {
-        // DOMが読み込まれるまで待機
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                this.initializeMap();
-            });
-        } else {
-            // すでに読み込み済みの場合は即座に初期化
-            this.initializeMap();
-        }
+    async init() {
+        return new Promise((resolve, reject) => {
+            // Leafletライブラリが読み込まれるまで待機
+            const waitForLeaflet = () => {
+                if (typeof L !== 'undefined') {
+                    // DOMが読み込まれるまで待機
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', () => {
+                            this.initializeMap();
+                            resolve();
+                        });
+                    } else {
+                        // すでに読み込み済みの場合は即座に初期化
+                        setTimeout(() => {
+                            this.initializeMap();
+                            resolve();
+                        }, 10); // 少し遅延を入れて確実にDOM準備完了を待つ
+                    }
+                } else {
+                    // 100ms後に再試行
+                    setTimeout(waitForLeaflet, 100);
+                }
+            };
+            
+            waitForLeaflet();
+        });
     }
     
     initializeMap() {
         try {
+            console.log('地図初期化開始...');
+            
+            // Leafletライブラリが読み込まれているかチェック
+            if (typeof L === 'undefined') {
+                console.error('Leafletライブラリが読み込まれていません');
+                this.showErrorMessage('地図初期化エラー', 'Leafletライブラリが読み込まれていません。');
+                return;
+            }
+            
             // 地図コンテナが存在するかチェック
             const mapContainer = document.getElementById('map');
             if (!mapContainer) {
@@ -30,18 +55,24 @@ export class MapCore {
                 this.showErrorMessage('地図初期化エラー', '地図コンテナが見つかりません。');
                 return;
             }
+            
+            console.log('地図コンテナ見つかりました:', mapContainer);
+            console.log('初期化パラメータ:', { center: this.initialCenter, zoom: this.initialZoom });
 
             // 地図の初期化
             this.map = L.map('map').setView(this.initialCenter, this.initialZoom);
+            console.log('地図オブジェクト作成完了:', this.map);
 
             // スケールバーを右下に追加
             L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 150 }).addTo(this.map);
 
             // 国土地理院タイルレイヤー
-            L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+            const tileLayer = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
                 attribution: "<a href='https://maps.gsi.go.jp/development/ichiran.html' target='_blank'>地理院タイル</a>",
                 minZoom: 2, maxZoom: 18
-            }).addTo(this.map);
+            });
+            tileLayer.addTo(this.map);
+            console.log('地理院タイルレイヤー追加完了');
 
             // ドラッグハンドル用の専用ペインを作成
             this.map.createPane('dragHandles');
@@ -58,9 +89,11 @@ export class MapCore {
             // 経路線用の専用ペインを作成
             this.map.createPane('routeLines');
             this.map.getPane('routeLines').style.zIndex = 600;
+            
+            console.log('地図初期化完了！');
         } catch (error) {
             console.error('地図の初期化に失敗しました:', error);
-            this.showErrorMessage('地図初期化エラー', '地図の初期化に失敗しました。ページを再読み込みしてください。');
+            this.showErrorMessage('地図初期化エラー', '地図の初期化に失敗しました: ' + error.message);
         }
     }
 
