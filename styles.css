@@ -269,7 +269,7 @@ html, body, #map {
     font-size: 12px;
     font-weight: bold;
     color: #333;
-    width: 60px;
+    width: 60px; /* 84px→60px */
     flex-shrink: 0;
 }
 
@@ -286,7 +286,7 @@ html, body, #map {
     border: 1px solid #ccc;
     border-radius: 3px;
     font-size: 12px;
-    width: 180px;
+    width: 200px; /* 180px→200px */
 }
 
 .info-field-row input:read-only {
