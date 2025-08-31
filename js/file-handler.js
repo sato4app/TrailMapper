@@ -155,7 +155,7 @@ export class FileHandler {
                         const parentDirectoryHandle = await this.currentImageFileHandle.getParent();
                         savePickerOptions.startIn = parentDirectoryHandle;
                     } catch (error) {
-                        console.log('同じディレクトリの取得に失敗、デフォルトディレクトリを使用');
+                        // 同じディレクトリの取得に失敗、デフォルトディレクトリを使用
                     }
                 }
                 
@@ -164,7 +164,6 @@ export class FileHandler {
                 await writable.write(blob);
                 await writable.close();
                 
-                console.log(`JSONファイルが保存されました: ${fileHandle.name}`);
                 return { success: true, filename: fileHandle.name };
             } else {
                 this.downloadJSON(data, defaultFilename);
@@ -172,11 +171,9 @@ export class FileHandler {
             }
         } catch (error) {
             if (error.name === 'AbortError') {
-                console.log('ファイル保存がキャンセルされました');
                 return { success: false, error: 'キャンセル' };
             }
             
-            console.error('ファイル保存エラー:', error);
             try {
                 this.downloadJSON(data, defaultFilename);
                 return { success: true, filename: defaultFilename };

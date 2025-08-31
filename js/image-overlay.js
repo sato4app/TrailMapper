@@ -391,7 +391,6 @@ export class ImageOverlay {
         
         // 中心座標の妥当性チェック
         if (!centerPos || !isFinite(centerPos.lat) || !isFinite(centerPos.lng)) {
-            console.error('無効な中心座標:', centerPos);
             return;
         }
         
@@ -401,7 +400,6 @@ export class ImageOverlay {
         
         // 画像サイズの妥当性チェック
         if (!imageWidth || !imageHeight || imageWidth <= 0 || imageHeight <= 0) {
-            console.error('無効な画像サイズ:', { width: imageWidth, height: imageHeight });
             return;
         }
         
@@ -409,7 +407,6 @@ export class ImageOverlay {
         
         // metersPerPixelの妥当性チェック
         if (!isFinite(metersPerPixel) || metersPerPixel <= 0) {
-            console.error('無効なmetersPerPixel値:', { metersPerPixel, zoom: this.map.getZoom(), lat: centerPos.lat });
             return;
         }
         
@@ -422,7 +419,6 @@ export class ImageOverlay {
         
         // オフセット値の妥当性チェック
         if (!isFinite(latOffset) || !isFinite(lngOffset)) {
-            console.error('無効なオフセット値:', { latOffset, lngOffset, metersPerPixel, scaledImageWidthMeters, scaledImageHeightMeters });
             return;
         }
         
@@ -431,7 +427,6 @@ export class ImageOverlay {
         const northEast = [centerPos.lat + latOffset, centerPos.lng + lngOffset];
         
         if (!isFinite(southWest[0]) || !isFinite(southWest[1]) || !isFinite(northEast[0]) || !isFinite(northEast[1])) {
-            console.error('無効な境界座標:', { southWest, northEast });
             return;
         }
         
@@ -550,7 +545,6 @@ export class ImageOverlay {
             try {
                 callback();
             } catch (error) {
-                console.error('画像更新コールバックでエラーが発生しました:', error);
             }
         });
     }

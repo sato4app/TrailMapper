@@ -40,11 +40,8 @@ export class RouteDataManager {
             // 成功した結果のみを抽出
             const successfulResults = results.filter(r => r.success).map(r => r.result);
             
-            // エラーがあった場合はコンソールに出力（重大なエラーも含む）
+            // エラーがあった場合の情報を収集（重大なエラーも含む）
             const errors = results.filter(r => !r.success);
-            errors.forEach(errorResult => {
-                console.warn(`ファイル ${errorResult.fileName} の読み込み: ${errorResult.error}`);
-            });
             
             // エラー結果も含めて返す（呼び出し元でエラーメッセージを表示可能）
             return {

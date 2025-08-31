@@ -39,11 +39,8 @@ export class MapCore {
     
     initializeMap() {
         try {
-            console.log('地図初期化開始...');
-            
             // Leafletライブラリが読み込まれているかチェック
             if (typeof L === 'undefined') {
-                console.error('Leafletライブラリが読み込まれていません');
                 this.showErrorMessage('地図初期化エラー', 'Leafletライブラリが読み込まれていません。');
                 return;
             }
@@ -51,17 +48,12 @@ export class MapCore {
             // 地図コンテナが存在するかチェック
             const mapContainer = document.getElementById('map');
             if (!mapContainer) {
-                console.error('地図コンテナ(#map)が見つかりません');
                 this.showErrorMessage('地図初期化エラー', '地図コンテナが見つかりません。');
                 return;
             }
-            
-            console.log('地図コンテナ見つかりました:', mapContainer);
-            console.log('初期化パラメータ:', { center: this.initialCenter, zoom: this.initialZoom });
 
             // 地図の初期化
             this.map = L.map('map').setView(this.initialCenter, this.initialZoom);
-            console.log('地図オブジェクト作成完了:', this.map);
 
             // スケールバーを右下に追加
             L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 150 }).addTo(this.map);
@@ -72,7 +64,6 @@ export class MapCore {
                 minZoom: 2, maxZoom: 18
             });
             tileLayer.addTo(this.map);
-            console.log('地理院タイルレイヤー追加完了');
 
             // ドラッグハンドル用の専用ペインを作成
             this.map.createPane('dragHandles');
@@ -90,9 +81,7 @@ export class MapCore {
             this.map.createPane('routeLines');
             this.map.getPane('routeLines').style.zIndex = 600;
             
-            console.log('地図初期化完了！');
         } catch (error) {
-            console.error('地図の初期化に失敗しました:', error);
             this.showErrorMessage('地図初期化エラー', '地図の初期化に失敗しました: ' + error.message);
         }
     }

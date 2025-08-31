@@ -58,7 +58,7 @@ export class RouteWaypointManager {
             wayPoints.splice(closestIndex, 1);
             onUpdate(routeData);
         } else {
-            console.log('削除対象のウェイポイントが見つかりませんでした');
+            // 削除対象のウェイポイントが見つからない（無視）
         }
     }
 

@@ -240,7 +240,7 @@ export class PointInfoManager {
             }
         } catch (error) {
             gpsElevationField.value = '';
-            console.warn('GPS標高取得エラー:', error);
+            // GPS標高取得エラー（無視）
         }
     }
 }

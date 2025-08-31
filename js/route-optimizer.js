@@ -35,7 +35,7 @@ export class RouteOptimizer {
             });
 
         } catch (error) {
-            console.warn(`複数ルート経路線描画エラー: ${error.message}`);
+            // 複数ルート経路線描画エラー（無視）
         }
     }
 
@@ -50,7 +50,7 @@ export class RouteOptimizer {
             const endPoint = this.getGpsPointByName(endPointName);
 
             if (!startPoint || !endPoint) {
-                console.warn(`ルート ${routeIndex + 1}: 開始または終了ポイントが見つかりません`);
+                // 開始または終了ポイントが見つからない（無視）
                 return;
             }
 
@@ -90,7 +90,7 @@ export class RouteOptimizer {
             }
 
         } catch (error) {
-            console.warn(`ルート ${routeIndex + 1} 描画エラー: ${error.message}`);
+            // ルート描画エラー（無視）
         }
     }
 

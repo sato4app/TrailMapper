@@ -153,7 +153,7 @@ export class RouteEditor {
                             return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
                         });
                     } catch (error) {
-                        console.warn('自動複数ルート経路線描画エラー:', error.message);
+                        // 自動複数ルート経路線描画エラー（無視）
                     }
                 }
             } else {
@@ -238,7 +238,7 @@ export class RouteEditor {
                 try {
                     this.performRouteOptimization(routeData, false, false); // メッセージなし、表示更新なし
                 } catch (error) {
-                    console.warn('自動最適化エラー:', error.message);
+                    // 自動最適化エラー（無視）
                 }
             }
         }
@@ -258,7 +258,7 @@ export class RouteEditor {
                     return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
                 });
             } catch (error) {
-                console.warn('ドラッグ終了後の経路線再描画エラー:', error.message);
+                // ドラッグ終了後の経路線再描画エラー（無視）
             }
         }
     }
@@ -331,7 +331,7 @@ export class RouteEditor {
                     return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
                 });
             } catch (error) {
-                console.warn('ドラッグ終了後の経路線再描画エラー:', error.message);
+                // ドラッグ終了後の経路線再描画エラー（無視）
             }
         }
     }
@@ -399,7 +399,7 @@ export class RouteEditor {
                 });
             }
         } catch (error) {
-            console.warn('ドラッグ中の経路線更新エラー:', error.message);
+            // ドラッグ中の経路線更新エラー（無視）
         }
     }
     
@@ -468,7 +468,6 @@ export class RouteEditor {
                 this.updateRouteOptionValue(selectedRoute);
             } else if (result.cancelled) {
                 // キャンセル時は何もメッセージを表示しない
-                console.log('保存がキャンセルされました');
             } else {
                 this.showMessage('error', '保存エラー', result.error);
             }
@@ -512,7 +511,7 @@ export class RouteEditor {
                             return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
                         });
                     } catch (error) {
-                        console.warn('最適化後の経路線再描画エラー:', error.message);
+                        // 最適化後の経路線再描画エラー（無視）
                     }
                 }
             } else {
@@ -689,7 +688,7 @@ export class RouteEditor {
                         return this.waypointManager.convertImageToMapCoordinates(imageX, imageY);
                     });
                 } catch (error) {
-                    console.warn('ルート選択変更時の経路線再描画エラー:', error.message);
+                    // ルート選択変更時の経路線再描画エラー（無視）
                 }
             }
         }

@@ -505,7 +505,7 @@ export class PointEditor {
             }
         } catch (error) {
             fieldElement.value = '';
-            console.warn('標高取得エラー:', error);
+            // 標高取得エラー（無視）
         }
     }
 
