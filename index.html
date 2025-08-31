@@ -130,10 +130,11 @@
                     <button id="deletePointBtn" class="point-action-btn" type="button">削除</button>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- 画像を地理院地図に重ね合せモード -->
-        <div id="imageOverlayEditor" class="editor-panel" style="display: none;">
+        <section id="imageOverlayEditor" class="editor-panel" style="display: none;" aria-labelledby="image-overlay-title">
+            <h2 id="image-overlay-title" class="visually-hidden">画像重ね合わせモード</h2>
             <input type="file" id="imageInput" accept="image/png" style="display: none;">
             <button id="loadImageBtn" title="画像を読み込む" class="leaflet-bar leaflet-control">PNG画像読み込み</button>
             <div class="point-count-container">
@@ -167,10 +168,11 @@
                 <textarea id="unmatchedPointsField" readonly placeholder="マッチングしなかったポイント" style="width: 100%; font-size: 12px;"></textarea>
             </div>
             
-        </div>
+        </section>
 
         <!-- ルート編集モード -->
-        <div id="routeEditor" class="editor-panel" style="display: none;">
+        <section id="routeEditor" class="editor-panel" style="display: none;" aria-labelledby="route-editor-title">
+            <h2 id="route-editor-title" class="visually-hidden">ルート編集モード</h2>
             <input type="file" id="routeJsonInput" accept=".json" multiple style="display: none;">
             <button id="loadRouteJsonBtn" title="ルートJSONを読み込む" class="leaflet-bar leaflet-control">ルートJSON読み込み</button>
             
@@ -201,8 +203,8 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
+    </aside>
 
     <!-- 分離したJavaScriptファイルを読み込む -->
     <!-- type="module"により、ES6モジュールとして読み込む -->
