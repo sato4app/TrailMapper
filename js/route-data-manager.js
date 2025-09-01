@@ -241,7 +241,7 @@ export class RouteDataManager {
         }
     }
 
-    // 保存用データを準備（仕様に従って中間点のJSON形式で保存）
+    // 保存用データを準備（サンプルファイル形式に従って保存）
     prepareSaveData(routeData) {
         const wayPoint = this.getWaypoints(routeData);
         
@@ -249,25 +249,27 @@ export class RouteDataManager {
             throw new Error('保存可能なルートデータがありません。');
         }
 
-        // 保存データの構築（読み込み時と同じ構造、type・index・四捨五入された座標を含む）
+        // 保存データの構築（サンプル01の形式に合わせる）
         const { startPoint, endPoint } = this.getRoutePoints(routeData);
         const saveData = {
+            routeInfo: {
+                startPoint: startPoint || '',
+                endPoint: endPoint || '',
+                waypointCount: wayPoint.length
+            },
             imageReference: this.imageOverlay.currentImageFileName || '',
-            startPoint: startPoint || '',
-            endPoint: endPoint || '',
-            wayPointCount: wayPoint.length,
-            wayPoint: wayPoint.map((point, arrayIndex) => ({
+            imageInfo: {
+                width: this.imageOverlay.getImageDimensions?.()?.width || 726,
+                height: this.imageOverlay.getImageDimensions?.()?.height || 624
+            },
+            points: wayPoint.map((point, arrayIndex) => ({
                 type: point.type || "waypoint",
                 index: point.index !== undefined ? point.index : arrayIndex + 1,
                 imageX: Math.round(point.imageX || 0),
                 imageY: Math.round(point.imageY || 0)
-            }))
+            })),
+            exportedAt: new Date().toISOString()
         };
-
-        // routeInfoがある場合は保持
-        if (routeData.routeInfo) {
-            saveData.routeInfo = { ...routeData.routeInfo };
-        }
 
         return saveData;
     }
