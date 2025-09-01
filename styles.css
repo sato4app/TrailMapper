@@ -51,6 +51,28 @@ body {
     cursor: default;
 }
 
+/* 地図コンテナのカーソル設定 - 矢印アイコンに統一 */
+#map {
+    cursor: default !important;
+}
+
+#map:active {
+    cursor: default !important;
+}
+
+/* Leaflet地図コンテナのカーソル設定 - 矢印アイコンに統一 */
+.leaflet-container {
+    cursor: default !important;
+}
+
+.leaflet-container:active {
+    cursor: default !important;
+}
+
+.leaflet-dragging .leaflet-container {
+    cursor: default !important;
+}
+
 html, body, #map {
     height: 100%;
     width: 100vw;
